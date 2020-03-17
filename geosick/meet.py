@@ -2,13 +2,13 @@ from .geosick import Ctx, Response, PointStream
 import numpy as np
 
 # Maximum distance at which one person may infect another
-INFECT_RADIUS = 2.0 
+INFECT_RADIUS = 2.0
 # Maximum relative speed at which one person may infect another (this should be
 # conservative, because the velocity estimates may be quite poor)
-INFECT_MAX_SPEED = 1.0
+INFECT_MAX_SPEED = 3.0
 # Probability that a person is infected by another person at distance at most
 # INFECT_RADIUS in one minute
-INFECT_RATE = 0.2
+INFECT_RATE = 0.5
 # Minimum infection rate that is considered for inclusion into Response.meet_ranges_ms
 INFECT_MEET_THRESHOLD = 0.001
 
@@ -79,4 +79,3 @@ def circle_isect_area(r1, r2, d):
     theta1 = 2*np.arccos(d1/r1)
     theta2 = 2*np.arccos(d2/r2)
     return 0.5*(theta1*r1**2 + theta2*r2**2 - a*d)
-

@@ -84,8 +84,8 @@ def geo_to_ne(ne_origin, latitude_e7, longitude_e7):
     lat_rad = latitude_e7 / 174533
     lng_deg_e7_to_m = 0.0111319 * np.cos(lat_rad)
 
-    northing_m = latitude_e7 * lat_deg_e7_to_m
-    easting_m = longitude_e7 * lng_deg_e7_to_m
+    northing_m = (latitude_e7 - ne_origin[0]) * lat_deg_e7_to_m
+    easting_m = (longitude_e7 - ne_origin[1]) * lng_deg_e7_to_m
     return (northing_m, easting_m)
 
 

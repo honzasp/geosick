@@ -26,12 +26,14 @@ def meet(ctx: Ctx, sick_points: PointStream, query_points: PointStream) -> Respo
             assert sick_p.timestamp == query_p.timestamp
             # compute infection rate per minute and update the score
             rate = eval_infect_rate(ctx, sick_p, query_p)
-            compl_score_log += np.log1p(-min(0.9, ctx.period_s/60 * rate))
+            compl_score_log += np.log1p(-min(0.9, ctx.period_ms/60000 * rate))
 
             # take very conservative distance, try not to scare people too much!
             distance = np.linalg.norm(sick_p.pos - query_p.pos) \
                 + sick_p.radius + query_p.radius
             min_distance = min(min_distance, distance)
+
+            print(sick_p, query_p, rate)
         else:
             rate = 0
 
@@ -76,7 +78,7 @@ def circle_isect_area(r1, r2, d):
     d1 = (d**2 - r2**2 + r1**2) / (2*d)
     d2 = d - d1
     a = np.sqrt((r1+r1+d)*(r1+r2-d)*(r1-r2-d)*(r2-r1-d)) / d
-    theta1 = 2*np.acos(d1/r1)
-    theta2 = 2*np.acos(d2/r2)
-    return 0.5*(theta1*r1 + theta2*r2 - a*d)
+    theta1 = 2*np.arccos(d1/r1)
+    theta2 = 2*np.arccos(d2/r2)
+    return 0.5*(theta1*r1**2 + theta2*r2**2 - a*d)
 

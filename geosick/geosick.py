@@ -60,8 +60,8 @@ class Response:
 # Request-specific context
 class Ctx:
     request: Request
-    period_s: float
-    timestamps_ms: List[float]
+    period_ms: int
+    timestamps_ms: List[int]
     ne_origin: Tuple[int, int]
 
 @dataclass

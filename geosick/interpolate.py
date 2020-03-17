@@ -2,6 +2,18 @@ from typing import List
 from .geosick import Ctx, UserSample, PointStream
 import numpy as np
 
+# Minimum Point.radius in meters
+MIN_RADIUS = 5.0
+# Maximum Point.velocity in maters per second
+MAX_SPEED = 90 / 3.6
+# Maximum allowable distance for interpolation in meters
+MAX_DELTA_DISTANCE = 100.0
+# Maximum allowable time duration for interpolation between two points that are more than
+# MAX_CLOSE_DISTANCE apart, in seconds
+MAX_DELTA_TIME = 5*60
+# Maximum distance between two points that is considered "close", in meters
+MAX_CLOSE_DISTANCE = 5.0
+
 # Interpolates a list of samples into a stream of points at the given timestamps
 def interpolate(ctx: Ctx, samples: List[UserSample], timestamps: List[int]) -> PointStream:
     curr_sample, curr_i = samples[0], 0
@@ -15,17 +27,17 @@ def interpolate(ctx: Ctx, samples: List[UserSample], timestamps: List[int]) -> P
             curr_i += 1
         assert curr_sample.timestamp_ms <= timestamp_ms < next_sample.timestamp_ms
 
-        if not curr_sample.is_end:
-            point = lerp_points(ctx, curr_point, next_point, timestamp_ms)
-        else:
+        if curr_sample.is_end:
             point = None
+        else:
+            point = lerp_points(ctx, curr_point, next_point, timestamp_ms)
         yield point
 
 # Converts UserSample to a Point
 def sample_to_point(ctx, sample):
     northing, easting = geo_to_ne(ctx.ne_origin, sample.latitude_e7, sample.longitude_e7)
     pos = np.array([northing, easting])
-    radius = sample.accuracy_m
+    radius = max(sample.accuracy_m, MIN_RADIUS)
 
     if sample.velocity_mps is not None and sample.heading_deg is not None:
         heading_rad = sample.heading_deg * np.pi / 180
@@ -38,6 +50,14 @@ def sample_to_point(ctx, sample):
 
 # Linearly interpolates between two points at given timestamp
 def lerp_points(ctx, p0, p1, timestamp_ms):
+    distance = np.linalg.norm(p1.pos - p0.pos)
+    delta_t_s = (p1.timestamp_ms - p0.timestamp_ms) / 1000
+
+    if distance > MAX_DELTA_DISTANCE:
+        return None
+    if delta_t_s > MAX_DELTA_TIME and distance > MAX_CLOSE_DISTANCE:
+        return None
+
     alpha = (timestamp_ms - p0.timestamp_ms) / (p1.timestamp - p0.timestamp)
     assert 0 <= alpha <= 1
     pos = p0.pos*(1-alpha) + p1.pos*alpha
@@ -46,8 +66,11 @@ def lerp_points(ctx, p0, p1, timestamp_ms):
     if p0.velocity is not None and p1.velocity is not None:
         velocity = p0.velocity*(1-alpha) + p1.velocity*alpha
     else:
-        delta_t_s = (p1.timestamp_ms - p0.timestamp_ms) / 1000
-        velocity = (p1.pos - p0.pos) / delta_t_s
+        velocity = (p1.pos - p0.pos) / max(0.1, delta_t_s)
+
+    speed = np.linalg.norm(velocity)
+    if speed > MAX_SPEED:
+        velocity *= MAX_SPEED / speed
 
     return Point(pos=pos, radius=radius, velocity=velocity)
 

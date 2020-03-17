@@ -17,10 +17,10 @@ def analyze(request: Request) -> Response:
         raise ArgumentError("sick_samples and query_samples do not intersect in time")
 
     ctx = Ctx()
-    ctx.period_s = 30
+    ctx.period_s = 30.0
     ctx.ne_origin = (sick_samples[0].latitude_e7, sick_samples[0].longitude_e7)
-    timestamps = list(range(start_timestamp, end_timestamp, period*1000))
+    ctx.timestamps_ms = list(range(start_timestamp, end_timestamp, period*1000))
     sick_points = interpolate(ctx, sick_samples, timestamps)
     query_points = interpolate(ctx, query_samples, timestamps)
-    response = meet(sick_points, query_points, period_s)
+    response = meet(ctx, sick_points, query_points, period_s)
     return response

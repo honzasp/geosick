@@ -21,27 +21,38 @@ from typing import List, Iterator, Optional, Tuple
 # the true position from the indicated position: it is NOT a standard deviation.
 @dataclass
 class UserSample:
-    timestamp_ms: int # Timestamp in ms (unix epoch)
-    latitude_e7: int # Latitude in deg * 1e7
-    longitude_e7: int # Longitude in deg * 1e7
-    accuracy_m: float # Horizontal position accuracy in meters
-    velocity_mps: Optional[float] # Horizontal speed in meters per second
-    heading_deg: Optional[float] # Direction of horizontal velocity in degrees (north 0, east 90)
-    is_end:  bool # If true, this sample starts a gap: we don't know where the user is until
-        # the next sample
+    # Timestamp in ms (unix epoch)
+    timestamp_ms: int
+    # Latitude in deg * 1e7
+    latitude_e7: int
+    # Longitude in deg * 1e7
+    longitude_e7: int
+    # Horizontal position accuracy in meters
+    accuracy_m: float
+    # Horizontal speed in meters per second
+    velocity_mps: Optional[float]
+    # Direction of horizontal velocity in degrees (north 0, east 90)
+    heading_deg: Optional[float]
+    # If true, this sample starts a gap: we don't know where the user is until the next sample
+    is_end:  bool
 
 # Request for an infection analysis.
 @dataclass
 class Request:
-    sick_samples: List[UserSample] # Samples of the infected person.
-    query_samples: List[UserSample] # Samples of the queried person
+    # Samples of the infected person.
+    sick_samples: List[UserSample]
+    # Samples of the queried person
+    query_samples: List[UserSample]
 
 # Result of the infection analysis.
 @dataclass
 class Response:
-    score: float # Infection score (higher score -> higher likelihood of infection)
-    distance: float # Conservative estimate of the minimum distance between the two
-        # persons
+    # Infection score (higher score -> higher likelihood of infection)
+    score: float
+    # Conservative estimate of the minimum distance between the two persons
+    distance: float
+    # List of timestamp ranges (in ms) when the persons may have met
+    meet_ranges_ms: List[Tuple[int, int]]
 
 
 ## Internal structures
@@ -50,15 +61,16 @@ class Response:
 class Ctx:
     request: Request
     period_s: float
+    timestamps_ms: List[float]
     ne_origin: Tuple[int, int]
 
 @dataclass
 class Point:
-    pos: np.array # North-east position in meters
-    radius: float # Horizontal accuracy in meters
-    velocity: Optional[np.array] # North-east velocity in meters per second; estimated if not
-        # available
+    # North-east position in meters
+    pos: np.array
+    # Horizontal accuracy in meters
+    radius: float
+    # North-east velocity in meters per second; estimated if not available
+    velocity: Optional[np.array]
 
 PointStream = Iterator[Optional[Point]]
-
-## Interpolation

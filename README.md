@@ -5,7 +5,11 @@ The purpose of the service is to analyze two Geopoint sequencies (one sequence f
 and one from a person infected by the Covid19 virus) and determine the probability that the healthy
 specimen was infected.
 
-## How to run
+## Algorithm description
+
+![Alt text](docs/algorithm_description.png?raw=true "Algorithm description")
+
+## How to run the server
 
     python3.8 -m geosick --help
 

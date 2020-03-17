@@ -16,13 +16,14 @@ INFECT_MEET_THRESHOLD = 0.001
 # positions.
 def meet(ctx: Ctx, sick_points: PointStream, query_points: PointStream) -> Response:
     compl_score_log = 0.0
-    min_distance = np.infinity
+    min_distance = np.inf
     meet_ranges = []
     first_meet = None
     last_meet = None
 
     for timestamp_ms, sick_p, query_p in zip(ctx.timestamps_ms, sick_points, query_points):
         if sick_p is not None and query_p is not None:
+            assert sick_p.timestamp == query_p.timestamp
             # compute infection rate per minute and update the score
             rate = eval_infect_rate(ctx, sick_p, query_p)
             compl_score_log += np.log1p(-min(0.9, ctx.period_s/60 * rate))
@@ -47,7 +48,7 @@ def meet(ctx: Ctx, sick_points: PointStream, query_points: PointStream) -> Respo
         meet_ranges.append((first_meet, last_meet))
 
     score = 1 - np.exp(compl_score_log)
-    return Response(score=score, distance=min_distance, meet_ranges=meet_ranges)
+    return Response(score=score, min_distance_m=min_distance, meet_ranges_ms=meet_ranges)
 
 # Estimates the infection rate (infection probablity per minute) between sick_p and
 # query_p

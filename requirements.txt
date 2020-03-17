@@ -2,3 +2,4 @@ numpy
 docopt
 ujson
 aiohttp
+bottle

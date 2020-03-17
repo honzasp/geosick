@@ -1,5 +1,5 @@
 from typing import List
-from .geosick import Ctx, UserSample, PointStream
+from .geosick import Ctx, UserSample, Point, PointStream
 import numpy as np
 
 # Minimum Point.radius in meters
@@ -14,13 +14,13 @@ MAX_DELTA_TIME = 5*60
 # Maximum distance between two points that is considered "close", in meters
 MAX_CLOSE_DISTANCE = 5.0
 
-# Interpolates a list of samples into a stream of points at the given timestamps
-def interpolate(ctx: Ctx, samples: List[UserSample], timestamps: List[int]) -> PointStream:
+# Interpolates a list of samples into a stream of points at ctx.timestamps_ms
+def interpolate(ctx: Ctx, samples: List[UserSample]) -> PointStream:
     curr_sample, curr_i = samples[0], 0
     curr_point = sample_to_point(ctx, curr_sample)
     next_sample = samples[1]
     next_point = sample_to_point(ctx, next_sample)
-    for timestamp_ms in timestamps:
+    for timestamp_ms in ctx.timestamps_ms:
         while timestamp_ms >= next_sample.timestamp_ms:
             curr_sample, next_sample = next_sample, samples[curr_i+1]
             curr_point, next_point = next_point, sample_to_point(ctx, next_sample)
@@ -41,24 +41,25 @@ def sample_to_point(ctx, sample):
 
     if sample.velocity_mps is not None and sample.heading_deg is not None:
         heading_rad = sample.heading_deg * np.pi / 180
-        heading_ne = np.array([cos(heading_rad), sin(heading_rad)])
+        heading_ne = np.array([np.cos(heading_rad), np.sin(heading_rad)])
         velocity = heading_ne * sample.velocity_mps
     else:
         velocity = None
 
-    return Point(pos=pos, radius=radius, velocity=velocity)
+    return Point(timestamp=sample.timestamp_ms,
+        pos=pos, radius=radius, velocity=velocity)
 
 # Linearly interpolates between two points at given timestamp
 def lerp_points(ctx, p0, p1, timestamp_ms):
     distance = np.linalg.norm(p1.pos - p0.pos)
-    delta_t_s = (p1.timestamp_ms - p0.timestamp_ms) / 1000
+    delta_t_s = (p1.timestamp - p0.timestamp) / 1000
 
     if distance > MAX_DELTA_DISTANCE:
         return None
     if delta_t_s > MAX_DELTA_TIME and distance > MAX_CLOSE_DISTANCE:
         return None
 
-    alpha = (timestamp_ms - p0.timestamp_ms) / (p1.timestamp - p0.timestamp)
+    alpha = (timestamp_ms - p0.timestamp) / (p1.timestamp - p0.timestamp)
     assert 0 <= alpha <= 1
     pos = p0.pos*(1-alpha) + p1.pos*alpha
     radius = p0.radius*(1-alpha) + p1.radius*alpha
@@ -72,7 +73,8 @@ def lerp_points(ctx, p0, p1, timestamp_ms):
     if speed > MAX_SPEED:
         velocity *= MAX_SPEED / speed
 
-    return Point(pos=pos, radius=radius, velocity=velocity)
+    return Point(timestamp=timestamp_ms,
+        pos=pos, radius=radius, velocity=velocity)
 
 # Converts latitude, longitude to northing, easting. The latitude-longitude pair
 # `ne_origin` is used as the origin of the northing-easing coordinate system (it should be

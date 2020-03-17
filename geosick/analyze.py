@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
-from .geosick import Request, Response
+from .geosick import Request, Response, Ctx
 from .interpolate import interpolate
 from .meet import meet
+import numpy as np
 
 def analyze(request: Request) -> Response:
     sick_samples, query_samples = request.sick_samples, request.query_samples
@@ -19,8 +20,8 @@ def analyze(request: Request) -> Response:
     ctx = Ctx()
     ctx.period_s = 30.0
     ctx.ne_origin = (sick_samples[0].latitude_e7, sick_samples[0].longitude_e7)
-    ctx.timestamps_ms = list(range(start_timestamp, end_timestamp, period*1000))
-    sick_points = interpolate(ctx, sick_samples, timestamps)
-    query_points = interpolate(ctx, query_samples, timestamps)
-    response = meet(ctx, sick_points, query_points, period_s)
+    ctx.timestamps_ms = np.arange(start_timestamp, end_timestamp, 1000*ctx.period_s)
+    sick_points = interpolate(ctx, sick_samples)
+    query_points = interpolate(ctx, query_samples)
+    response = meet(ctx, sick_points, query_points)
     return response

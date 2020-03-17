@@ -50,7 +50,7 @@ class Response:
     # Infection score (higher score -> higher likelihood of infection)
     score: float
     # Conservative estimate of the minimum distance between the two persons
-    distance: float
+    min_distance_m: float
     # List of timestamp ranges (in ms) when the persons may have met
     meet_ranges_ms: List[Tuple[int, int]]
 
@@ -66,6 +66,8 @@ class Ctx:
 
 @dataclass
 class Point:
+    # Timestamp in ms
+    timestamp: int
     # North-east position in meters
     pos: np.array
     # Horizontal accuracy in meters

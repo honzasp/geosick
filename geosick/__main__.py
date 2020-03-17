@@ -30,7 +30,6 @@ logger = logging.getLogger("geosick.main")
 
 def _main():
     _init_logging()
-
     try:
         args = docopt.docopt(__doc__, argv = sys.argv[1:], help = False)
         loop = asyncio.get_event_loop()

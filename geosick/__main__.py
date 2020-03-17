@@ -14,86 +14,31 @@ Options:
 """
 
 import asyncio
-import aiohttp
-import aiohttp.web
 import concurrent
 import docopt
 import logging
 import sys
 import signal
-import ujson
 import os
+import sys
+import time
 
 from asyncio.futures import CancelledError
+from geosick.server import run_server
 
-from geosick.geosick import UserSample, Request, Response
-from geosick.analyze import analyze
+logger = logging.getLogger("geosick.main")
 
-logger = logging.getLogger("geosick.server")
+def _main():
+    _init_logging()
 
-async def _run_server(executor, args):
-    loop = asyncio.get_event_loop()
-    port = int(args.get("--port") or 4100)
-
-    async def post_eval_risk(req):
-        req_json = ujson.loads(await req.text())
-
-        def geo_from_json(geo_json) -> UserSample:
-            return UserSample(
-                timestamp_ms=int(geo_json["timestamp_ms"]),
-                latitude_e7=int(geo_json["latitude_e7"]),
-                longitude_e7=int(geo_json["longitude_e7"]),
-                accuracy_m=int(geo_json["accuracy_m"]),
-                velocity_mps=geo_json.get("velocity_mps"),
-                heading_deg=geo_json.get("heading_deg"),
-                is_end=geo_json.get("is_end", False),
-            )
-
-        query = Request(
-            sick_samples=[
-                geo_from_json(geopoint)
-                for geopoint in req_json["sick_geopoints"]
-            ],
-            query_samples=[
-                geo_from_json(geopoint)
-                for geopoint in req_json["query_geopoints"]
-            ]
-        )
-
-        resp = await loop.run_in_executor(executor, analyze, query)
-        resp_json = {
-            "score": resp.score,
-            "minimal_distance": resp.distance
-        }
-
-        return aiohttp.web.Response(
-            body=ujson.dumps(resp_json),
-            status=200,
-            headers={"Content-Type":"application/json"}
-        )
-
-    app = aiohttp.web.Application()
-    app.router.add_route("POST", "/v1/evaluate_risk", post_eval_risk)
-
-    runner = aiohttp.web.AppRunner(app)
-    await runner.setup()
-    site = aiohttp.web.TCPSite(runner, "0.0.0.0", port)
-    app_task = loop.create_task(site.start())
-
-    logger.info(f'Geosick now running on port {port}...')
     try:
-        await asyncio.gather(app_task, asyncio.Future())
-    finally:
-        await runner.cleanup()
-
-def _main(args):
-    try:
+        args = docopt.docopt(__doc__, argv = sys.argv[1:], help = False)
         loop = asyncio.get_event_loop()
 
         thread_pool_size = int(os.cpu_count() * 1.5)
         executor = concurrent.futures.ThreadPoolExecutor(thread_pool_size)
 
-        task = loop.create_task(_run_server(executor, args))
+        task = loop.create_task(run_server(executor, args))
 
         def signal_handler(signal_name):
             logger.warning("Received %s, cancelling the main task", signal_name)
@@ -130,6 +75,29 @@ def _main(args):
     logger.debug("Bye")
     return 0
 
+def _init_logging():
+    formatter = logging.Formatter(
+        fmt = "%(asctime)s %(levelname)s %(name)s: %(message)s",
+        datefmt = "%Y-%m-%d %H:%M:%S")
+    formatter.converter = time.gmtime
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(formatter)
+
+    for logger_name in ("geosick",):
+        logger = logging.getLogger(logger_name)
+        if "GEOSICK_DEBUG" in os.environ:
+            logger.setLevel(logging.DEBUG)
+        else:
+            logger.setLevel(logging.INFO)
+        logger.addHandler(handler)
+
+    asyncio_logger = logging.getLogger("asyncio")
+    asyncio_logger.addHandler(handler)
+
+    if "GEOSICK_ASYNCIO_DEBUG" in os.environ:
+        asyncio_logger.setLevel(logging.DEBUG)
+    else:
+        asyncio_logger.setLevel(logging.WARNING)
+
 if __name__ == "__main__":
-    args = docopt.docopt(__doc__, argv = sys.argv[1:], help = False)
-    _main(args)
+    sys.exit(_main())

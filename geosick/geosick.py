@@ -41,30 +41,10 @@ class Response:
     distance: float # Conservative estimate of the minimum distance between the two
         # persons
 
-def analyze(request: Request) -> Response:
-    sick_samples, query_samples = request.sick_samples, request.query_samples
-    if len(sick_samples) < 2:
-        raise ArgumentError("There are not enough sick_samples")
-    if  len(query_samples) < 2:
-        raise ArgumentError("There are not enough query_samples")
 
-    start_timestamp = max(sick_samples[0].timestamp_ms, query_samples[0].timestamp_ms)
-    end_timestamp = min(sick_samples[-1].timestamp_ms, query_samples[-1].timestamp_ms)
-    if start_timestamp >= end_timestamp:
-        raise ArgumentError("sick_samples and query_samples do not intersect in time")
+## Internal structures
 
-    ctx = Ctx()
-    ctx.period_s = 30
-    ctx.ne_origin = (sick_samples[0].latitude_e7, sick_samples[0].longitude_e7)
-    timestamps = list(range(start_timestamp, end_timestamp, period*1000))
-    sick_points = interpolate(ctx, sick_samples, timestamps)
-    query_points = interpolate(ctx, query_samples, timestamps)
-    response = meet(sick_points, query_points, period_s)
-    return response
-
-
-## Interpolation
-
+# Request-specific context
 class Ctx:
     request: Request
     period_s: float
@@ -73,57 +53,14 @@ class Ctx:
 @dataclass
 class Point:
     pos: np.array, # North-east position in meters
-    altitude: float # Altitude in meters
     radius: float # Horizontal accuracy in meters
-    velocity: Optional[np.array] # North-east velocity in meters per second
+    velocity: Optional[np.array] # North-east velocity in meters per second; estimated if not
+        # available
 
 PointStream = Iterator[Optional[Point]]
 
-def interpolate(ctx: Ctx, samples: List[UserSample], timestamps: List[int]) -> PointStream:
-    curr_sample, curr_i = samples[0], 0
-    next_sample = samples[1]
-    for timestamp_ms in timestamps:
-        while timestamp_ms >= next_sample.timestamp_ms:
-            curr_sample, next_sample = next_sample, samples[curr_i+1]
-            curr_i += 1
-        assert curr_sample.timestamp_ms <= timestamp_ms < next_sample.timestamp_ms
+## Interpolation
 
-# Converts UserSample to a Point
-def sample_to_point(ctx, sample):
-    northing, easting, altitude = geo_to_nea(ctx.ne_origin,
-        sample.latitude_e7, sample.longitude_e7, sample.altitude_m)
-    pos = np.array([northing, easting])
-    radius = sample.accuracy_m
-
-    if sample.velocity_mps is not None and sample.heading_deg is not None:
-        heading_rad = sample.heading_deg * np.pi / 180
-        heading_ne = np.array([cos(heading_rad), sin(heading_rad)])
-        velocity = heading_ne * sample.velocity_mps
-    else:
-        velocity = None
-
-    return Point(pos=pos, altitude=altitude, radius=radius, velocity=velocity)
-
-# Linearly interpolates two Point-s as `p0*(1-alpha) + p1`
-def lerp_points(ctx, p0, p1, alpha):
-    pos = 
-
-# Converts latitude, longitude and altitude to northing, easting, altitude. The
-# latitude-longitude pair `ne_origin` is used as the origin of the northing-easing
-# coordinate system (it should be reasonably close to the given coordinates).
-def geo_to_nea(ne_origin, latitude_e7, longitude_e7, altitude_m):
-    lat_deg_e7_to_m = 0.0111132 # at latitude 45 deg, negligible variation with latitude
-    lat_rad = latitude_e7 / 174533
-    lng_deg_e7_to_m = 0.0111319 * np.cos(lat_rad)
-
-    northing_m = latitude_e7 * lat_deg_e7_to_m
-    easting_m = longitude_e7 * lng_deg_e7_to_m
-    return (northing_m, easting_m, altitude_m)
-
-
-def meet(sick_points: PointStream, query_points: PointStream,
-        period_s: float) -> Response:
-    pass
 
 
 

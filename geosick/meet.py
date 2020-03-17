@@ -28,12 +28,10 @@ def meet(ctx: Ctx, sick_points: PointStream, query_points: PointStream) -> Respo
             rate = eval_infect_rate(ctx, sick_p, query_p)
             compl_score_log += np.log1p(-min(0.9, ctx.period_ms/60000 * rate))
 
-            # take very conservative distance, try not to scare people too much!
+            # take conservative distance, try not to scare people too much!
             distance = np.linalg.norm(sick_p.pos - query_p.pos) \
-                + sick_p.radius + query_p.radius
+                + 0.5*sick_p.radius + 0.5*query_p.radius
             min_distance = min(min_distance, distance)
-
-            print(sick_p, query_p, rate)
         else:
             rate = 0
 

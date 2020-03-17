@@ -1,5 +1,5 @@
 """
-Usage: skystore [-p <listen-port>]
+Usage: geosick [-p <listen-port>]
 
 Options:
    -p, --port <listen-port>
@@ -48,7 +48,7 @@ def response_to_json(resp: Response):
     return {
         "score": resp.score,
         "minimal_distance_m": resp.min_distance_m,
-        "meeting_range_ms": resp.meet_ranges_ms,
+        "meeting_ranges_ms": resp.meet_ranges_ms,
     }
 
 @app.post("/v1/evaluate_risk")

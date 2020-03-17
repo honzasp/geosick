@@ -5,6 +5,10 @@ The purpose of the service is to analyze two Geopoint sequencies (one sequence f
 and one from a person infected by the Covid19 virus) and determine a probability that the healthy
 specimen was infected.
 
+## How to run
+
+    python3.8 -m geosick --help
+
 ## API
 
 The API is very simplistic and implements only one endpoint:
@@ -24,9 +28,9 @@ where
         "timestamp_ms": <integer>,
         "latitude_e7": <integer>,
         "longitude_e7": <integer>,
-        "accuracy_m": <integer>,
-        "velocity_mps": <integer>?,
-        "heading_deg": <integer>?,
+        "accuracy_m": <float>,
+        "velocity_mps": <float>?,
+        "heading_deg": <float>?,
         "is_end": <bool>?,
     }
 

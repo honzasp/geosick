@@ -1,3 +1,5 @@
+import numpy as np
+
 from dataclasses import dataclass
 from typing import List, Iterator, Optional, Tuple
 
@@ -52,7 +54,7 @@ class Ctx:
 
 @dataclass
 class Point:
-    pos: np.array, # North-east position in meters
+    pos: np.array # North-east position in meters
     radius: float # Horizontal accuracy in meters
     velocity: Optional[np.array] # North-east velocity in meters per second; estimated if not
         # available
@@ -60,7 +62,3 @@ class Point:
 PointStream = Iterator[Optional[Point]]
 
 ## Interpolation
-
-
-
-

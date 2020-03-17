@@ -53,7 +53,14 @@ def response_to_json(resp: Response):
 
 @app.post("/v1/evaluate_risk")
 def evaluate_risk():
-    request = request_from_json(json.load(bottle.request.body))
+    try:
+        request = request_from_json(json.load(bottle.request.body))
+    except ValueError as e:
+        bottle.response.status = 400
+        return f"ERROR: the request is invalid: {e}"
+    except KeyError as e:
+        bottle.response.status = 400
+        return f"ERROR: key error: {e}"
     response = analyze(request)
     return response_to_json(response)
 

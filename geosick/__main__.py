@@ -1,4 +1,4 @@
-u"""
+"""
 Usage: skystore [-p <listen-port>]
 
 Options:
@@ -10,93 +10,60 @@ Options:
 
    Geosick lives at https://https://github.com/honzasp/geosick,
    the responsible persons are Jan Plhák (jan.plhak@kiwi.com) and
-   Jan Špaček (patek.mail@gmai.com).
+   Jan Špaček (patek.mail@gmail.com).
 """
-
-import asyncio
-import concurrent
+import bottle
 import docopt
-import logging
-import sys
-import signal
-import os
-import sys
-import time
+import ujson
 
-from asyncio.futures import CancelledError
-from geosick.server import run_server
+from .geosick import UserSample, Request, Response
+from .analyze import analyze
 
-logger = logging.getLogger("geosick.main")
+app = bottle.Bottle()
 
-def _main():
-    _init_logging()
+def sample_from_json(geo_json) -> UserSample:
+    return UserSample(
+        timestamp_ms=int(geo_json["timestamp_ms"]),
+        latitude_e7=int(geo_json["latitude_e7"]),
+        longitude_e7=int(geo_json["longitude_e7"]),
+        accuracy_m=float(geo_json["accuracy_m"]),
+        velocity_mps=geo_json.get("velocity_mps"),
+        heading_deg=geo_json.get("heading_deg"),
+        is_end=geo_json.get("is_end", False),
+    )
+
+def request_from_json(req_json) -> Request:
+    return Request(
+        sick_samples=[
+            sample_from_json(geopoint)
+            for geopoint in req_json["sick_geopoints"]
+        ],
+        query_samples=[
+            sample_from_json(geopoint)
+            for geopoint in req_json["query_geopoints"]
+        ]
+    )
+
+def response_to_json(resp: Response):
+    return {
+        "score": resp.score,
+        "minimal_distance_m": resp.min_distance_m,
+        "meeting_range_ms": resp.meet_ranges_ms,
+    }
+
+@app.post("/v1/evaluate_risk")
+def evaluate_risk():
     try:
-        args = docopt.docopt(__doc__, argv = sys.argv[1:], help = False)
-        loop = asyncio.get_event_loop()
-
-        thread_pool_size = int(os.cpu_count() * 1.5)
-        executor = concurrent.futures.ThreadPoolExecutor(thread_pool_size)
-
-        task = loop.create_task(run_server(executor, args))
-
-        def signal_handler(signal_name):
-            logger.warning("Received %s, cancelling the main task", signal_name)
-            task.cancel()
-
-        loop.add_signal_handler(signal.SIGINT, signal_handler, "SIGINT")
-        loop.add_signal_handler(signal.SIGTERM, signal_handler, "SIGTERM")
-
-    except docopt.DocoptExit:
-        print(__doc__.strip())
-        return 2
-    except Exception:
-        logger.exception("Exception raised before the main loop started")
-        return 1
-
-    try:
-        loop.run_until_complete(task)
-    except CancelledError:
-        logger.warning("Main task was canceled")
-    except Exception:
-        logger.exception("Exception raised from the main task")
-        return 1
-    finally:
-        task.cancel()
-        while not task.done():
-            try:
-                loop.run_until_complete(task)
-            except Exception:
-                logger.exception("Exception raised from the finishing main task")
-        if executor is not None:
-            logger.debug("Shutting down the executor")
-            executor.shutdown()
-
-    logger.debug("Bye")
-    return 0
-
-def _init_logging():
-    formatter = logging.Formatter(
-        fmt = "%(asctime)s %(levelname)s %(name)s: %(message)s",
-        datefmt = "%Y-%m-%d %H:%M:%S")
-    formatter.converter = time.gmtime
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(formatter)
-
-    for logger_name in ("geosick",):
-        logger = logging.getLogger(logger_name)
-        if "GEOSICK_DEBUG" in os.environ:
-            logger.setLevel(logging.DEBUG)
-        else:
-            logger.setLevel(logging.INFO)
-        logger.addHandler(handler)
-
-    asyncio_logger = logging.getLogger("asyncio")
-    asyncio_logger.addHandler(handler)
-
-    if "GEOSICK_ASYNCIO_DEBUG" in os.environ:
-        asyncio_logger.setLevel(logging.DEBUG)
-    else:
-        asyncio_logger.setLevel(logging.WARNING)
+        request = request_from_json(ujson.load(bottle.request.body))
+    except ValueError as e:
+        bottle.response.status = 400
+        return f"ERROR: the request is invalid: {e}"
+    except KeyError as e:
+        bottle.response.status = 400
+        return f"ERROR: key error: {e}"
+    response = analyze(request)
+    return response_to_json(response)
 
 if __name__ == "__main__":
-    sys.exit(_main())
+    args = docopt.docopt(__doc__)
+    bottle.run(app, host="0.0.0.0", port=int(args["--port"] or 4100))

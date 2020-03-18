@@ -88,7 +88,7 @@ def circle_isect_area(r1, r2, d):
 
     d1 = (d**2 - r2**2 + r1**2) / (2*d)
     d2 = d - d1
-    a = np.sqrt((r1+r1+d)*(r1+r2-d)*(r1-r2-d)*(r2-r1-d)) / d
+    a = np.sqrt((r1+r2+d)*(r1+r2-d)*(r1-r2-d)*(r2-r1-d)) / d
     theta1 = 2*np.arccos(d1/r1)
     theta2 = 2*np.arccos(d2/r2)
     return 0.5*(theta1*r1**2 + theta2*r2**2 - a*d)

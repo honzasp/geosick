@@ -4,3 +4,4 @@ build
 .history
 *.code-workspace
 *__pycache__*
+Session.vim

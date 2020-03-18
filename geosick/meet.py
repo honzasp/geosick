@@ -1,4 +1,4 @@
-from .geosick import Ctx, Response, PointStream
+from .geosick import Ctx, Response, PointStream, Step
 import numpy as np
 
 # Maximum distance at which one person may infect another
@@ -20,6 +20,7 @@ def meet(ctx: Ctx, sick_points: PointStream, query_points: PointStream) -> Respo
     meet_ranges = []
     first_meet = None
     last_meet = None
+    steps = []
 
     for timestamp_ms, sick_p, query_p in zip(ctx.timestamps_ms, sick_points, query_points):
         if sick_p is not None and query_p is not None:
@@ -34,6 +35,7 @@ def meet(ctx: Ctx, sick_points: PointStream, query_points: PointStream) -> Respo
             min_distance = min(min_distance, distance)
         else:
             rate = 0
+            distance = None
 
         if rate > INFECT_MEET_THRESHOLD:
             if first_meet is None:
@@ -44,11 +46,22 @@ def meet(ctx: Ctx, sick_points: PointStream, query_points: PointStream) -> Respo
                 meet_ranges.append((first_meet, last_meet))
             first_meet = last_meet = None
 
+        if ctx.request.full:
+            steps.append(Step(
+                timestamp=timestamp_ms,
+                sick_point=sick_p,
+                query_point=query_p,
+                risk=rate,
+                distance=distance,
+            ))
+
+
     if first_meet is not None:
         meet_ranges.append((first_meet, last_meet))
 
     score = 1 - np.exp(compl_score_log)
-    return Response(score=score, min_distance_m=min_distance, meet_ranges_ms=meet_ranges)
+    return Response(score=score, min_distance_m=min_distance,
+        meet_ranges_ms=meet_ranges, steps=steps)
 
 # Estimates the infection rate (infection probablity per minute) between sick_p and
 # query_p

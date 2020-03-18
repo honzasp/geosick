@@ -35,8 +35,7 @@ def interpolate(ctx: Ctx, samples: List[UserSample]) -> PointStream:
 
 # Converts UserSample to a Point
 def sample_to_point(ctx, sample):
-    northing, easting = geo_to_ne(ctx.ne_origin, sample.latitude_e7, sample.longitude_e7)
-    pos = np.array([northing, easting])
+    pos = geo_to_ne(ctx.ne_origin, sample.latitude_e7, sample.longitude_e7)
     radius = max(sample.accuracy_m, MIN_RADIUS)
 
     if sample.velocity_mps is not None and sample.heading_deg is not None:
@@ -47,7 +46,8 @@ def sample_to_point(ctx, sample):
         velocity = None
 
     return Point(timestamp=sample.timestamp_ms,
-        pos=pos, radius=radius, velocity=velocity)
+        pos=pos, radius=radius, velocity=velocity,
+        latitude_e7=sample.latitude_e7, longitude_e7=sample.longitude_e7)
 
 # Linearly interpolates between two points at given timestamp
 def lerp_points(ctx, p0, p1, timestamp_ms):
@@ -63,6 +63,8 @@ def lerp_points(ctx, p0, p1, timestamp_ms):
     assert 0 <= alpha <= 1
     pos = p0.pos*(1-alpha) + p1.pos*alpha
     radius = p0.radius*(1-alpha) + p1.radius*alpha
+    latitude = p0.latitude_e7*(1-alpha) + p1.latitude_e7*alpha
+    longitude = p0.longitude_e7*(1-alpha) + p1.longitude_e7*alpha
 
     if p0.velocity is not None and p1.velocity is not None:
         velocity = p0.velocity*(1-alpha) + p1.velocity*alpha
@@ -74,7 +76,8 @@ def lerp_points(ctx, p0, p1, timestamp_ms):
         velocity *= MAX_SPEED / speed
 
     return Point(timestamp=timestamp_ms,
-        pos=pos, radius=radius, velocity=velocity)
+        pos=pos, radius=radius, velocity=velocity,
+        latitude_e7=latitude, longitude_e7=longitude)
 
 # Converts latitude, longitude to northing, easting. The latitude-longitude pair
 # `ne_origin` is used as the origin of the northing-easing coordinate system (it should be
@@ -86,6 +89,6 @@ def geo_to_ne(ne_origin, latitude_e7, longitude_e7):
 
     northing_m = (latitude_e7 - ne_origin[0]) * lat_deg_e7_to_m
     easting_m = (longitude_e7 - ne_origin[1]) * lng_deg_e7_to_m
-    return (northing_m, easting_m)
+    return np.array([northing_m, easting_m])
 
 

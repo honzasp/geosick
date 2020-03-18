@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>Geosick map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ==" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js" integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew==" crossorigin=""></script>
+
+<style>
+body {
+  margin: 0;
+  padding: 0;
+}
+
+#container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  margin: 0;
+}
+
+#top {
+  flex: auto;
+  display: flex;
+  flex-direction: row;
+}
+
+#sidebar {
+  width: 300px;
+}
+
+#sidebar .sidebar-box {
+  margin-bottom: 10px;
+}
+
+#map {
+  flex: auto;
+  background-color: #ddf;
+  height: 100%;
+}
+
+#bottom {
+  height: 40px;
+  display: flex;
+}
+
+#buttons {
+  flex: none;
+  display: flex;
+}
+
+#buttons button {
+  flex: 1;
+  min-width: 60px;
+  margin: 2px;
+}
+
+#slider {
+  display: block;
+  flex: auto;
+  margin: 0 8px;
+}
+</style>
+</head>
+
+<body>
+  <div id="container">
+    <div id="top">
+      <div id="sidebar">
+        <div class="sidebar-box">
+          <h1>Geosick</h1>
+        </div>
+        <div class="sidebar-box">
+          <label>Soubor: <input id="file" type="file"></label>
+        </div>
+        <div class="sidebar-box">
+          <i id="status"></i>
+        </div>
+        <div class="sidebar-box">
+          Celkové skóre: <strong id="score"></strong><br>
+          Vzdálenost: <span id="min-distance"></span><br>
+        </div>
+        <div class="sidebar-box">
+          Čas: <span id="timestamp"></span><br>
+          Aktuální risk: <span id="risk"></span><br>
+          Aktuální vzdálenost: <span id="distance"></span><br>
+        </div>
+      </div>
+
+      <div id="map"></div>
+    </div>
+
+    <div id="bottom">
+      <div id="buttons">
+        <button id="play" title="Spustit animaci">&#x25b6;</button>
+        <button id="pause" title="Pozastavit animaci">&#x23f8;</button>
+        <button id="step-prev" title="Krok zpět">&#x23ea;</button>
+        <button id="step-next" title="Krok vpřed">&#x23e9;</button>
+      </div>
+      <input id="slider" type="range" min="0" max="0" step="1">
+    </div>
+  </div>
+
+<script>
+
+/// initialization
+
+var map = L.map('map').setView([49.8888882, 15.4749003], 7);
+L.tileLayer("//mapserver.mapy.cz/base-m/{z}-{x}-{y}", {
+  attribution: "(c) Mapy.cz",
+  maxZoom: 19,
+}).addTo(map);
+
+var fileElem = document.getElementById("file");
+var sliderElem = document.getElementById("slider");
+var statusElem = document.getElementById("status");
+var buttonElems = {
+  play: document.getElementById("play"),
+  pause: document.getElementById("pause"),
+  stepPrev: document.getElementById("step-prev"),
+  stepNext: document.getElementById("step-next"),
+};
+var sidebarElems = {
+  score: document.getElementById("score"),
+  min_distance: document.getElementById("min-distance"),
+  timestamp: document.getElementById("timestamp"),
+  risk: document.getElementById("risk"),
+  distance: document.getElementById("distance"),
+};
+
+/// communication with the server
+
+function handleFile() {
+  if (fileElem.files.length == 0) {
+    setResponse(null);
+    return;
+  }
+
+  var file = fileElem.files[0];
+  var fileReader = new FileReader();
+  fileReader.onload = function() {
+    var requestJson;
+    try {
+      requestJson = JSON.parse(fileReader.result);
+    } catch (e) {
+      if (e instanceof SyntaxError) {
+        reportError(e.message);
+        return;
+      } else {
+        throw e;
+      }
+    }
+    sendRequest(requestJson);
+  };
+  fileReader.onerror = function() {
+    reportError("Error reading file: " + fileReader.error.message);
+  };
+  fileReader.readAsText(file);
+  setStatus("Načínám soubor...");
+}
+fileElem.addEventListener("change", handleFile, false);
+
+function sendRequest(requestJson) {
+  requestJson["full"] = true;
+
+  var xhr = new XMLHttpRequest();
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState == XMLHttpRequest.LOADING) {
+      setStatus("Načítám analýzu...");
+    } else if (xhr.readyState == XMLHttpRequest.DONE) {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        setResponse(requestJson, xhr.response);
+      } else {
+        reportError("Error sending request: " + xhr.statusText);
+      }
+    }
+  };
+  xhr.open("POST", "/v1/evaluate_risk");
+  xhr.responseType = "json";
+  xhr.send(JSON.stringify(requestJson));
+  setStatus("Zasílám požadavek...");
+}
+
+
+/// displaying the request and response on the map
+
+var SICK_COLOR = "#f00";
+var QUERY_COLOR = "#00f";
+
+var mapLayer = null;
+var mapRequest = null;
+var mapResponse = null;
+var sickCircle = null;
+var queryCircle = null;
+
+function setResponse(requestJson, responseJson) {
+  setStatus("Analýza provedena");
+  if (mapLayer !== null) {
+    mapLayer.removeFrom(map);
+    mapLayer = null;
+  }
+  mapLayer = L.featureGroup().addTo(map);
+  mapRequest = requestJson;
+  mapResponse = responseJson;
+
+  setSidebarResponse(mapResponse);
+  if (!mapResponse) {
+    setSidebarStep(null);
+    return;
+  }
+
+  function addSamples(samples, color) {
+    var latlngs = [];
+    for (var sample of samples) {
+      if (sample) {
+        latlngs.push([sample.latitude_e7*1e-7, sample.longitude_e7*1e-7])
+      } else {
+        addPolyline(latlngs, color);
+        latlngs = []
+      }
+    }
+    addPolyline(latlngs, color);
+  }
+
+  function addPolyline(latlngs, color) {
+    mapLayer.addLayer(L.polyline(latlngs, {color: color}));
+  }
+
+  function addCircle(color) {
+    return L.circle([0, 0],
+      {color: color, fill: true, stroke: false, fillOpacity: 0.6}).addTo(map);
+  }
+
+  addSamples(mapRequest.sick_geopoints, SICK_COLOR);
+  addSamples(mapRequest.query_geopoints, QUERY_COLOR);
+  sickCircle = addCircle(SICK_COLOR);
+  queryCircle = addCircle(QUERY_COLOR);
+  sliderElem.min = 0;
+  sliderElem.max = mapResponse.steps.length - 1;
+
+  setStep(0);
+  map.fitBounds(mapLayer.getBounds());
+}
+
+function setStep(idx) {
+  if (idx < 0) {
+    idx = 0;
+  } else if (idx >= mapResponse.steps.length) {
+    idx = mapResponse.steps.length - 1;
+  }
+
+  var step = mapResponse.steps[idx];
+  var sick_p = step.sick_point;
+  var query_p = step.query_point;
+  sickCircle.setLatLng([sick_p.latitude_e7*1e-7, sick_p.longitude_e7*1e-7])
+    .setRadius(sick_p.radius);
+  queryCircle.setLatLng([query_p.latitude_e7*1e-7, query_p.longitude_e7*1e-7])
+    .setRadius(query_p.radius);
+  setSidebarStep(step);
+
+  if (sliderElem.valueAsNumber != idx) {
+    sliderElem.valueAsNumber = idx;
+  }
+}
+
+function getStep() {
+  return sliderElem.valueAsNumber;
+}
+
+sliderElem.addEventListener("input", function() {
+  setStep(getStep());
+}, false);
+buttonElems.stepPrev.addEventListener("click", function() {
+  setStep(getStep() - 1);
+}, false);
+buttonElems.stepNext.addEventListener("click", function() {
+  setStep(getStep() + 1);
+}, false);
+
+
+/// animating the steps
+
+var animationTimer = null;
+
+function animationStep() {
+  if (mapResponse) {
+    setStep((getStep() + 1) % mapResponse.steps.length);
+  } else {
+    stopAnimation();
+  }
+}
+
+function startAnimation() {
+  stopAnimation();
+  animationTimer = setInterval(animationStep, 300);
+}
+
+function stopAnimation() {
+  if (animationTimer) {
+    clearInterval(animationTimer);
+  }
+  animationTimer = null;
+}
+
+buttonElems.play.addEventListener("click", startAnimation, false);
+buttonElems.pause.addEventListener("click", stopAnimation, false);
+
+
+/// sidebar
+
+function setSidebarResponse(response) {
+  sidebarElems.score.innerText = response
+    ? response.score.toFixed(3) : "n/a";
+  sidebarElems.min_distance.innerText = response
+    ? response.minimal_distance_m.toFixed(1) + " m" : "n/a";
+}
+
+function setSidebarStep(step) {
+  sidebarElems.timestamp.innerText = step
+    ? new Date(step.timestamp).toLocaleString("cs-CZ",
+      {hour12: false, dateStyle: "medium", timeStyle: "long"})
+    : "n/a";
+  sidebarElems.risk.innerText = step
+    ? step.risk.toFixed(3) : "n/a";
+  sidebarElems.distance.innerText = step
+    ? step.distance.toFixed(1) + " m" : "n/a";
+}
+
+function setStatus(msg) {
+  statusElem.innerText = msg;
+}
+
+function reportError(msg) {
+  alert(msg);
+}
+
+setResponse(null);
+setStatus("Vyberte prosím soubor");
+</script>
+
+</body>
+
+</html>

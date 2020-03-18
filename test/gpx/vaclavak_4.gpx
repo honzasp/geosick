@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<gpx creator="mapy.cz" version="1.1" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+    <trk>
+        <name></name>
+        <trkseg>
+            <trkpt lat="50.0801937282" lon="14.4294758141">
+                <ele>206.0</ele>
+                <name>WP 1</name>
+            </trkpt>
+            <trkpt lat="50.0799731165" lon="14.4291217625">
+                <ele>206.0</ele>
+                <name>WP 2</name>
+            </trkpt>
+            <trkpt lat="50.0798906386" lon="14.4291968644">
+                <ele>206.920987301</ele>
+                <name>WP 3</name>
+            </trkpt>
+            <trkpt lat="50.0798423588" lon="14.4292612374">
+                <ele>207.132452486</ele>
+                <name>WP 4</name>
+            </trkpt>
+            <trkpt lat="50.0799389184" lon="14.4293577969">
+                <ele>207.003109588</ele>
+                <name>WP 5</name>
+            </trkpt>
+            <trkpt lat="50.079979822" lon="14.4292612374">
+                <ele>207.0</ele>
+                <name>WP 6</name>
+            </trkpt>
+            <trkpt lat="50.0803861767" lon="14.4286926091">
+                <ele>203.0</ele>
+                <name>WP 7</name>
+            </trkpt>
+            <trkpt lat="50.0808408111" lon="14.4278557599">
+                <ele>200.0</ele>
+                <name>WP 8</name>
+            </trkpt>
+            <trkpt lat="50.0814329088" lon="14.4271798432">
+                <ele>199.0</ele>
+                <name>WP 9</name>
+            </trkpt>
+            <trkpt lat="50.0819284469" lon="14.4265682995">
+                <ele>198.0</ele>
+                <name>WP 10</name>
+            </trkpt>
+            <trkpt lat="50.0819834322" lon="14.4269545376">
+                <ele>198.0</ele>
+                <name>WP 11</name>
+            </trkpt>
+            <trkpt lat="50.0819143653" lon="14.4269652665">
+                <ele>198.0</ele>
+                <name>WP 12</name>
+            </trkpt>
+            <trkpt lat="50.082045123" lon="14.4265790284">
+                <ele>198.0</ele>
+                <name>WP 13</name>
+            </trkpt>
+            <trkpt lat="50.0821758807" lon="14.4263537228">
+                <ele>198.0</ele>
+                <name>WP 14</name>
+            </trkpt>
+            <trkpt lat="50.0821832567" lon="14.4264502823">
+                <ele>198.0</ele>
+                <name>WP 15</name>
+            </trkpt>
+            <trkpt lat="50.0824514776" lon="14.4263322651">
+                <ele>197.0</ele>
+                <name>WP 16</name>
+            </trkpt>
+            <trkpt lat="50.0828511268" lon="14.4258923829">
+                <ele>197.0</ele>
+                <name>WP 17</name>
+            </trkpt>
+            <trkpt lat="50.0835049152" lon="14.4247122109">
+                <ele>197.0</ele>
+                <name>WP 18</name>
+            </trkpt>
+            <trkpt lat="50.0840380043" lon="14.4241650403">
+                <ele>195.537706828</ele>
+                <name>WP 19</name>
+            </trkpt>
+            <trkpt lat="50.0838489085" lon="14.4240577519">
+                <ele>196.0</ele>
+                <name>WP 20</name>
+            </trkpt>
+            <trkpt lat="50.083842203" lon="14.4241650403">
+                <ele>196.0</ele>
+                <name>WP 21</name>
+            </trkpt>
+            <trkpt lat="50.0837664306" lon="14.4241972268">
+                <ele>196.0</ele>
+                <name>WP 22</name>
+            </trkpt>
+            <trkpt lat="50.0840554386" lon="14.4235320389">
+                <ele>196.0</ele>
+                <name>WP 23</name>
+            </trkpt>
+        </trkseg>
+    </trk>
+</gpx>

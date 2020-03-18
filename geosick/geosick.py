@@ -33,7 +33,8 @@ class UserSample:
     velocity_mps: Optional[float]
     # Direction of horizontal velocity in degrees (north 0, east 90)
     heading_deg: Optional[float]
-    # If true, this sample starts a gap: we don't know where the user is until the next sample
+    # If true, this sample starts a gap: we don't know where the user is until the next
+    # sample
     is_end:  bool
 
 # Request for an infection analysis.
@@ -43,6 +44,8 @@ class Request:
     sick_samples: List[UserSample]
     # Samples of the queried person
     query_samples: List[UserSample]
+    # If set, the response contains list of internal steps
+    full: bool = False
 
 # Result of the infection analysis.
 @dataclass
@@ -53,6 +56,8 @@ class Response:
     min_distance_m: float
     # List of timestamp ranges (in ms) when the persons may have met
     meet_ranges_ms: List[Tuple[int, int]]
+    # List of internal steps (optional, present only if `full` is set in request)
+    steps: Optional[List["Step"]]
 
 
 ## Internal structures
@@ -74,5 +79,17 @@ class Point:
     radius: float
     # North-east velocity in meters per second; estimated if not available
     velocity: Optional[np.array]
+    # Latitude in degrees * 1e7
+    latitude_e7: int
+    # Longitude in degrees * 1e7
+    longitude_e7: int
+
+@dataclass
+class Step:
+    timestamp: int
+    sick_point: Optional[Point]
+    query_point: Optional[Point]
+    risk: float
+    distance: Optional[float]
 
 PointStream = Iterator[Optional[Point]]

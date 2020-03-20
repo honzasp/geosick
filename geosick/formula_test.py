@@ -1,3 +1,16 @@
+# This script tests the formula for estimating
+#   P(dist(x1, x2) < R_infect)
+# given x1, x2 uniformly sampled from circles of radius R1, R2 at distance D.
+#
+# We use the formula
+#   (A_infect * A_isect) / (A_1 * A_2)
+# where A_1, A_2, A_infect are areas of circles with radius R1, R2, R_infect, and A_isect
+# is the area of the intersection of two circles with radius R1, R2 at distance D.
+#
+# We obtain ground truth values using Monte Carlo simulation and compare them with the
+# values provided by the formula.
+#
+# Run this script using `python3 -m geosick.formula_test`
 from dataclasses import dataclass
 import numpy as np
 
@@ -35,7 +48,7 @@ def estimate_formula(test: TestCase):
 
 TEST_CASES = [
     TestCase(r1, r2, dist, 2.0)
-    for (r1, r2) in [(5.0,5.0), (5.0,10.0), (10.0,10.0)]
+    for (r1, r2) in [(3.0,3.0), (3.0,5.0), (5.0,5.0), (5.0,10.0), (10.0,10.0)]
     for dist in [0.0, 0.1*r2, 0.2*r2, 0.5*r2, 0.8*r2, 0.9*r2]
 ]
 

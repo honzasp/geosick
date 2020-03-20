@@ -1,5 +1,6 @@
-from .geosick import Ctx, Response, PointStream, Step
 import numpy as np
+
+from .geosick import Ctx, Response, PointStream, Step
 
 # Maximum distance at which one person may infect another
 INFECT_RADIUS = 2.0

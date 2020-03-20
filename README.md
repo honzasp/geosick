@@ -1,6 +1,7 @@
 ## Geosick Service
 
-Geosick is a service written for the Covid19cz initiative by Jan Plhák and Jan Špaček.
+Geosick is a service written for the Covid19cz initiative by Jan Plhák (jan.plhak@distributa.io)
+and Jan Špaček (patek.mail@gmail.com) from [Distributa.io](www.distributa.io).
 The purpose of the service is to analyze two Geopoint sequencies (one sequence from a healthy person
 and one from a person infected by the Covid19 virus) and determine the probability that the healthy
 specimen was infected.

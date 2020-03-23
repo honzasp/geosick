@@ -12,6 +12,38 @@ specimen was infected.
 
 ## How to run the server
 
+### Build
+
+This project uses a [meson](https://mesonbuild.com) & [ninja](https://ninja-build.org) based build system.
+Both are installed via the `requirements.txt` file:
+
+    $ pip3 install -r requirements.txt
+
+To build the module, first configure the build using meson, then build it using ninja and then install the module again via ninja:
+
+    $ meson build/
+    $ ninja -C build/
+    $ sudo ninja -C build/ install
+
+The above step will build and install a python module called `_geosick`.
+Importing the `_geosick` module should work out-of-box.
+The last command installs the module into the python's system-wide module path.
+
+It is possible to uninstall the module with:
+
+    $ sudo ninja -C build/ uninstall
+
+If you don't want to install the module in a system-wide path, configure the project with a custom prefix, something like:
+
+    $ meson build/ --prefix ~/.local/
+    $ ninja -C build/
+    $ sudo ninja -C build/ install
+
+For the module import to work correctly in a python script you should set your `PYTHONPATH`.
+When using the example steps above, the path would probaly be `/home/$USER/.local/lib64/python3.8/site-packages`.
+
+### Run
+
     python3.8 -m geosick --help
 
 ## API

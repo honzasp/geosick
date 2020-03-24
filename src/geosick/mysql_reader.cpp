@@ -5,8 +5,8 @@ namespace geosick {
 MysqlReader::MysqlReader(const std::string& db, const std::string& host, unsigned port,
     const std::string& user, const std::string& password)
 {
-    this->_conn.connect(db.c_str(), host.c_str(), user.c_str(), password.c_str(), port);
-    mysqlpp::Query query = this->_conn.query(R"(
+    m_conn.connect(db.c_str(), host.c_str(), user.c_str(), password.c_str(), port);
+    mysqlpp::Query query = m_conn.query(R"(
         SELECT client_id,
             UNIX_TIMESTAMP(created_at),
             CAST(lat AS DECIMAL(10,7))*10000000,
@@ -16,11 +16,11 @@ MysqlReader::MysqlReader(const std::string& db, const std::string& host, unsigne
             speed
         FROM clients_positions
     )");
-    this->_result = query.use();
+    m_result = query.use();
 }
 
 std::optional<GeoRow> MysqlReader::read() {
-    auto row = this->_result.fetch_row();
+    auto row = m_result.fetch_row();
     if (!row) { return {}; }
 
     GeoRow res;

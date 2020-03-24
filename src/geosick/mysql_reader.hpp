@@ -5,8 +5,8 @@
 namespace geosick {
 
 class MysqlReader final: public GeoRowReader {
-    mysqlpp::Connection _conn;
-    mysqlpp::UseQueryResult _result;
+    mysqlpp::Connection m_conn;
+    mysqlpp::UseQueryResult m_result;
 public:
     MysqlReader(const std::string& db, const std::string& host, unsigned port,
         const std::string& user, const std::string& password);

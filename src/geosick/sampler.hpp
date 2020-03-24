@@ -2,6 +2,7 @@
 #include <vector>
 #include <chrono>
 #include "geo_row.hpp"
+#include "slice.hpp"
 
 namespace geosick {
 
@@ -29,7 +30,8 @@ public:
 
     uint32_t get_max_time_index() const;
 
-    std::vector<GeoSample> sample(const std::vector<GeoRow>& rows) const;
+    void
+    sample(const ArrayView<GeoRow> rows, std::vector<GeoSample>& out_samples) const;
 
 private:
     GeoSample get_weighted_sample(const GeoRow& row, const GeoRow& next_row,

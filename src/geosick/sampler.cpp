@@ -31,8 +31,8 @@ Sampler::Sampler(UtcTime begin_time, UtcTime end_time, DurationS period)
     assert(m_begin_time <= m_end_time);
 }
 
-std::vector<GeoSample>
-Sampler::sample(const std::vector<GeoRow>& rows) const
+void
+Sampler::sample(const ArrayView<GeoRow> rows, std::vector<GeoSample>& out_samples) const
 {
     assert(std::is_sorted(rows.begin(), rows.end(),
         [](const auto& lhs, const auto& rhs) {
@@ -66,10 +66,11 @@ Sampler::sample(const std::vector<GeoRow>& rows) const
 
         // TODO: Add continuity checking.
         for (; offset < next_row_offset && offset <= m_end_offset; offset += m_period) {
-            samples.push_back(get_weighted_sample(row, next_row, row_offset, next_row_offset, offset));
+            out_samples.push_back(
+                get_weighted_sample(row, next_row, row_offset, next_row_offset, offset)
+            );
         }
     }
-    return samples;
 }
 
 GeoSample

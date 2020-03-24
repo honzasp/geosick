@@ -11,10 +11,10 @@ mysqlpp_dep = declare_dependency(
 )
 
 sources = files(
-  'src/geosick/main.cpp',
-  'src/geosick/sampler.cpp'
+  'src/geosick/sampler.cpp',
   'src/geosick/main.cpp',
   'src/geosick/mysql_reader.cpp',
+  'src/geosick/geo_search.cpp'
 )
 includes = include_directories('src')
 

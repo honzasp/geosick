@@ -20,7 +20,7 @@ GeoSearch::GeoSearch(const std::vector<GeoSample>& samples)
 }
 
 std::vector<GeoSample::UserID>
-GeoSearch::find_users_within_circle(int32_t lat, int32_t lon, unsigned radius) const
+GeoSearch::find_users_within_circle(int32_t lat, int32_t lon, unsigned radius, uint32_t time_index) const
 {
     auto pow2 = [](const int64_t i) {
         return i*i;

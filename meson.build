@@ -5,9 +5,10 @@ mysql_dep = dependency('mysqlclient')
 
 mysqlpp_includes = include_directories('/usr/include/mysql++')
 mysqlpp_lib = cpp.find_library('mysqlpp')
+stdcppfs_lib = cpp.find_library('stdc++fs')
 mysqlpp_dep = declare_dependency(
   include_directories: mysqlpp_includes,
-  dependencies: mysqlpp_lib,
+  dependencies: [mysqlpp_lib, stdcppfs_lib]
 )
 
 sources = files(

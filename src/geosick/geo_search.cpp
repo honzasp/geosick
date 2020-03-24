@@ -7,6 +7,10 @@
 namespace geosick {
 namespace {
 
+int64_t pow2(int64_t x) {
+    return x*x;
+}
+
 double degree_to_radian(int32_t angle_int) {
     static constexpr int32_t e7 = 10000000; // 10^7
     double angle = double(angle_int) / e7;
@@ -29,6 +33,28 @@ double gps_distance_haversine_m(int32_t lat1, int32_t lon1, int32_t lat2, int32_
         + cos(lat_rad1) * cos(lat_rad2) * sin(diff_lo / 2) * sin(diff_lo / 2))
     );
 	return 2 * earth_radius_m * computation;
+}
+
+int64_t pow2_gps_distance_fast_m(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2) {
+    static constexpr double lat_deg_e7_to_m = 0.0111132; // at latitude 45 deg, negligible variation with latitude
+    double lat_rad = lat2 / 174533.;
+    double lon_deg_e7_to_m = 0.0111319 * cos(lat_rad);
+
+    int32_t northing_m = (lat2 - lat1) * lat_deg_e7_to_m;
+    int32_t easting_m = (lon2 - lon1) * lon_deg_e7_to_m;
+    return pow2(northing_m) + pow2(easting_m);
+}
+
+bool
+circles_intersect(int32_t lat1, int32_t lon1, int16_t r1, int32_t lat2, int32_t lon2, int16_t r2)
+{
+    return gps_distance_haversine_m(lat1, lon1, lat2, lon2) <= r1 + r2;
+}
+
+bool
+circles_intersect_fast(int32_t lat1, int32_t lon1, int16_t r1, int32_t lat2, int32_t lon2, int16_t r2)
+{
+    return pow2_gps_distance_fast_m(lat1, lon1, lat2, lon2) <= pow2(r1 + r2);
 }
 
 } // END OF ANONYMOUS NAMESPACE
@@ -54,7 +80,7 @@ GeoSearch::find_users_within_circle(int32_t lat, int32_t lon, unsigned radius, T
 
     std::vector<GeoSample::UserID> users;
     for (const auto& p: it->second) {
-        if (gps_distance_haversine_m(lat, lon, p.lat, p.lon) <= p.accuracy_m + radius) {
+        if (circles_intersect_fast(lat, lon, radius, p.lat, p.lon, p.accuracy_m)) {
             users.push_back(p.user_id);
         }
     }

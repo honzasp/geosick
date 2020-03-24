@@ -1,4 +1,5 @@
-#include "sampler.hpp"
+#include "geosick/sampler.hpp"
+#include "geosick/gps_distance.hpp"
 #include <algorithm>
 #include <cassert>
 
@@ -53,11 +54,17 @@ Sampler::sample(ArrayView<const GeoRow> rows, std::vector<GeoSample>& out_sample
 
         const auto row_timestamp = UtcTime(DurationS(row.timestamp_utc_s));
         const auto next_row_timestamp = UtcTime(DurationS(next_row.timestamp_utc_s));
+        const auto time_delta = next_row_timestamp - row_timestamp;
+        const auto distance_m_pow2 = pow2_gps_distance_fast_m(row.lat, row.lon, next_row.lat, next_row.lon);
 
         if (row_timestamp > m_end_time) {
             break;
         } else if (next_row_timestamp < m_begin_time) {
             continue; // TODO: Possibly use binary search
+        } else if (time_delta > MAX_DELTA_TIME) {
+            continue;
+        } else if (distance_m_pow2 > MAX_DELTA_DISTANCE_M_POW2) {
+            continue;
         }
 
         auto row_offset = row_timestamp - m_begin_time;
@@ -69,7 +76,6 @@ Sampler::sample(ArrayView<const GeoRow> rows, std::vector<GeoSample>& out_sample
             offset = integer_mod(offset, m_period);
         }
 
-        // TODO: Add continuity checking.
         for (; offset < next_row_offset && offset <= m_end_offset; offset += m_period) {
             out_samples.push_back(
                 get_weighted_sample(row, next_row, row_offset, next_row_offset, offset)

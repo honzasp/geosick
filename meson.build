@@ -16,6 +16,7 @@ boost_dep = dependency('boost')
 
 sources = files(
   'src/geosick/geo_search.cpp',
+  'src/geosick/gps_distance.cpp',
   'src/geosick/main.cpp',
   'src/geosick/mysql_reader.cpp',
   'src/geosick/read_process.cpp',

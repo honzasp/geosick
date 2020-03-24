@@ -20,6 +20,12 @@ using UtcTime = std::chrono::time_point<std::chrono::steady_clock, DurationS>;
 
 class Sampler {
 private:
+    // Maximum allowable time duration for interpolation between two points
+    static constexpr DurationS MAX_DELTA_TIME = std::chrono::minutes(5);
+    // Maximum allowable distance for interpolation in meters
+    static constexpr unsigned MAX_DELTA_DISTANCE_M = 100;
+    static constexpr unsigned MAX_DELTA_DISTANCE_M_POW2 = MAX_DELTA_DISTANCE_M * MAX_DELTA_DISTANCE_M;
+
     UtcTime m_begin_time;
     UtcTime m_end_time;
     DurationS m_end_offset;

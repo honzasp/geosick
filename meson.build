@@ -5,11 +5,14 @@ mysql_dep = dependency('mysqlclient')
 
 mysqlpp_includes = include_directories('/usr/include/mysql++')
 mysqlpp_lib = cpp.find_library('mysqlpp')
-stdcppfs_lib = cpp.find_library('stdc++fs')
 mysqlpp_dep = declare_dependency(
   include_directories: mysqlpp_includes,
-  dependencies: [mysqlpp_lib, stdcppfs_lib]
+  dependencies: [mysqlpp_lib]
 )
+
+stdcppfs_dep = cpp.find_library('stdc++fs')
+
+boost_dep = dependency('boost')
 
 sources = files(
   'src/geosick/geo_search.cpp',
@@ -25,4 +28,5 @@ executable('geosick', sources,
   include_directories: includes,
   dependencies: [mysql_dep, mysqlpp_dep],
   override_options: ['cpp_std=c++17'],
+  cpp_args: ['-Wextra'],
 )

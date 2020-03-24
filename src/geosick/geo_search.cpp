@@ -7,7 +7,11 @@
 namespace geosick {
 namespace {
 
-int64_t pow2(int64_t x) {
+int32_t pow2(int32_t x) {
+    return x*x;
+}
+
+double pow2(double x) {
     return x*x;
 }
 
@@ -35,24 +39,26 @@ double gps_distance_haversine_m(int32_t lat1, int32_t lon1, int32_t lat2, int32_
 	return 2 * earth_radius_m * computation;
 }
 
-int64_t pow2_gps_distance_fast_m(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2) {
+double pow2_gps_distance_fast_m(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2) {
     static constexpr double lat_deg_e7_to_m = 0.0111132; // at latitude 45 deg, negligible variation with latitude
     double lat_rad = lat2 / 174533.;
     double lon_deg_e7_to_m = 0.0111319 * cos(lat_rad);
 
-    int32_t northing_m = (lat2 - lat1) * lat_deg_e7_to_m;
-    int32_t easting_m = (lon2 - lon1) * lon_deg_e7_to_m;
+    double northing_m = (lat2 - lat1) * lat_deg_e7_to_m;
+    double easting_m = (lon2 - lon1) * lon_deg_e7_to_m;
     return pow2(northing_m) + pow2(easting_m);
 }
 
+/*
 bool
-circles_intersect(int32_t lat1, int32_t lon1, int16_t r1, int32_t lat2, int32_t lon2, int16_t r2)
+circles_intersect(int32_t lat1, int32_t lon1, int32_t r1, int32_t lat2, int32_t lon2, int32_t r2)
 {
     return gps_distance_haversine_m(lat1, lon1, lat2, lon2) <= r1 + r2;
 }
+*/
 
 bool
-circles_intersect_fast(int32_t lat1, int32_t lon1, int16_t r1, int32_t lat2, int32_t lon2, int16_t r2)
+circles_intersect_fast(int32_t lat1, int32_t lon1, int32_t r1, int32_t lat2, int32_t lon2, int32_t r2)
 {
     return pow2_gps_distance_fast_m(lat1, lon1, lat2, lon2) <= pow2(r1 + r2);
 }
@@ -145,7 +151,7 @@ GeoSearch::get_lon_delta() {
     static constexpr int32_t lon1 = 165000000;
     static constexpr int32_t lat2 = 492000000;
     static constexpr int32_t lon2 = lon1;
-    auto angle_per_meter = abs(lon1 - lon2) / gps_distance_haversine_m(lat1, lon1, lat2, lon2);
+    auto angle_per_meter = abs(lat1 - lat2) / gps_distance_haversine_m(lat1, lon1, lat2, lon2);
     return angle_per_meter * GPS_HASH_PRECISION_M;
 }
 

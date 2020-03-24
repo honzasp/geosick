@@ -11,13 +11,12 @@ public:
     using TimeIdx = uint32_t;
 
 private:
-    static constexpr int32_t GPS_HASH_PRECISION_M = 200;
+    static constexpr double GPS_HASH_PRECISION_M = 200;
     const int32_t m_lat_delta;
     const int32_t m_lon_delta;
 
     struct UserGeoPoint {
         GeoSample::UserID user_id;
-        uint32_t time_index;
         int32_t lat, lon;
         uint16_t accuracy_m;
     };

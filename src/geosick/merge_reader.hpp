@@ -28,12 +28,16 @@ class MergeReader final: public GeoRowReader {
     }
 
 public:
-    explicit MergeReader(Compare compare): _compare(std::move(compare)) {}
+    explicit MergeReader(Compare compare): m_compare(std::move(compare)) {}
 
     void add_reader(std::unique_ptr<GeoRowReader> reader) {
         m_heap.emplace_back();
         m_heap.back().reader = std::move(reader);
         this->advance();
+    }
+
+    size_t get_reader_count() const {
+        return m_heap.size();
     }
 
     virtual std::optional<GeoRow> read() override {

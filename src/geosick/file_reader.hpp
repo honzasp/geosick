@@ -7,7 +7,7 @@
 namespace geosick {
 
 class FileReader final: public GeoRowReader {
-    FILE* _file = nullptr;
+    FILE* m_file = nullptr;
 public:
     explicit FileReader(const std::filesystem::path& path) {
         m_file = std::fopen(path.c_str(), "r");

@@ -26,7 +26,7 @@ includes = include_directories('src')
 
 executable('geosick', sources,
   include_directories: includes,
-  dependencies: [mysql_dep, mysqlpp_dep],
+  dependencies: [mysql_dep, mysqlpp_dep, stdcppfs_dep, boost_dep],
   override_options: ['cpp_std=c++17'],
   cpp_args: ['-Wextra'],
 )

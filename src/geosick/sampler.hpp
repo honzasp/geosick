@@ -36,7 +36,6 @@ public:
 private:
     GeoSample get_weighted_sample(const GeoRow& row, const GeoRow& next_row,
         DurationS row_offset, DurationS next_row_offset, DurationS offset) const;
-
 };
 
 }

@@ -5,19 +5,19 @@
 namespace geosick {
 namespace {
 
-int roundUp(int numToRound, int multiple)
+int round_up(int num_to_round, int multiple)
 {
     assert(multiple != 0);
 
-    int remainder = abs(numToRound) % multiple;
+    int remainder = abs(num_to_round) % multiple;
     if (remainder == 0) {
-        return numToRound;
+        return num_to_round;
     }
 
-    if (numToRound < 0) {
-        return -(abs(numToRound) - remainder);
+    if (num_to_round < 0) {
+        return -(abs(num_to_round) - remainder);
     } else {
-        return numToRound + multiple - remainder;
+        return num_to_round + multiple - remainder;
     }
 }
 
@@ -25,7 +25,8 @@ int roundUp(int numToRound, int multiple)
 
 
 Sampler::Sampler(UtcTime begin_time, UtcTime end_time, DurationS period)
- : m_begin_time(begin_time), m_end_time(end_time), m_period(period)
+ : m_begin_time(begin_time), m_end_time(end_time), m_end_offset(end_time - begin_time),
+   m_period(period)
 {
     assert(m_begin_time <= m_end_time);
 }
@@ -58,12 +59,12 @@ Sampler::sample(const std::vector<GeoRow>& rows) const
         auto next_row_offset = row_timestamp - m_begin_time;
         assert(next_row_offset > DurationS(0));
 
-        auto offset = DurationS(roundUp(row_offset.count(), m_period.count()));
+        auto offset = DurationS(round_up(row_offset.count(), m_period.count()));
         while (offset < DurationS(0)) {
             offset += m_period;
         }
 
-        for (; offset < next_row_offset; offset += m_period) {
+        for (; offset < next_row_offset && offset <= m_end_offset; offset += m_period) {
             samples.push_back(get_weighted_sample(row, next_row, row_offset, next_row_offset, offset));
         }
     }
@@ -94,5 +95,10 @@ Sampler::get_weighted_sample(const GeoRow& row, const GeoRow& next_row,
     };
 }
 
+uint32_t
+Sampler::get_max_time_index() const
+{
+    return m_end_offset / m_period;
+}
 
 }

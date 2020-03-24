@@ -21,6 +21,7 @@ class Sampler {
 private:
     UtcTime m_begin_time;
     UtcTime m_end_time;
+    DurationS m_end_offset;
     DurationS m_period;
 
 public:

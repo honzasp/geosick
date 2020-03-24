@@ -21,6 +21,11 @@ int round_up(int num_to_round, int multiple)
     }
 }
 
+template<typename T>
+T integer_mod(T x, T m) {
+    return ((x % m) + m) % m;
+}
+
 } // END OF ANONYMOUS NAMESPACE
 
 
@@ -57,11 +62,11 @@ Sampler::sample(ArrayView<const GeoRow> rows, std::vector<GeoSample>& out_sample
 
         auto row_offset = row_timestamp - m_begin_time;
         auto next_row_offset = next_row_timestamp - m_begin_time;
-        assert(next_row_offset > DurationS(0));
+        assert(next_row_offset > DurationS::zero());
 
         auto offset = DurationS(round_up(row_offset.count(), m_period.count()));
-        while (offset < DurationS(0)) { // TODO: Use mode for negative numbers.
-            offset += m_period;
+        if (offset < DurationS::zero()) {
+            offset = integer_mod(offset, m_period);
         }
 
         // TODO: Add continuity checking.
@@ -77,8 +82,8 @@ GeoSample
 Sampler::get_weighted_sample(const GeoRow& row, const GeoRow& next_row,
         DurationS row_offset, DurationS next_row_offset, DurationS offset) const
 {
-    assert(offset >= DurationS(0));
-    assert(offset % m_period == DurationS(0));
+    assert(offset >= DurationS::zero());
+    assert(offset % m_period == DurationS::zero());
     assert(row_offset <= offset);
     assert(offset <= next_row_offset);
 

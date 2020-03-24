@@ -19,6 +19,11 @@ public:
     : m_begin(begin), m_end(end)
     { }
 
+    template<class I>
+    Slice(Slice<I> other)
+    : m_begin(other.begin()), m_end(other.end())
+    { }
+
     size_t size() const {
         return m_end - m_begin;
     }
@@ -62,11 +67,17 @@ auto make_slice(const Container& cont) {
 }
 
 template <typename T>
-using ArrayView = Slice<const T*>;
+using ArrayView = Slice<T*>;
 
 template<class T>
-auto make_view(const T* begin, const T* end) {
-    return Slice<const T*>(begin, end);
+auto make_view(T* begin, T* end) {
+    return Slice<T*>(begin, end);
+}
+
+template<class Container>
+auto make_view(Container& cont) {
+    using Value = typename Container::value_type;
+    return Slice<Value*>(cont.data(), cont.data()+cont.size());
 }
 
 template<class Container>

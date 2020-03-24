@@ -31,7 +31,7 @@ public:
     uint32_t get_max_time_index() const;
 
     void
-    sample(const ArrayView<GeoRow> rows, std::vector<GeoSample>& out_samples) const;
+    sample(ArrayView<const GeoRow> rows, std::vector<GeoSample>& out_samples) const;
 
 private:
     GeoSample get_weighted_sample(const GeoRow& row, const GeoRow& next_row,

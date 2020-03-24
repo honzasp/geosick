@@ -56,22 +56,30 @@ static void main() {
     auto infected_samples = rows_to_samples(sampler, read_proc.read_infected_rows());
     GeoSearch search(infected_samples);
 
-    SearchProcess search_proc(&sampler, &search);
-    auto all_reader = read_proc.read_all_rows();
     FileWriter all_writer(temp_dir / "all_rows.bin");
-    while (auto row = all_reader->read()) {
+    SearchProcess search_proc(&sampler, &search, &all_writer);
+    auto proc_reader = read_proc.read_all_rows();
+    while (auto row = proc_reader->read()) {
         search_proc.process_row(*row);
-        all_writer.write(*row);
-        print_row(*row);
     }
     search_proc.process_end();
-    all_writer.close();
 
     auto hits = search_proc.read_hits();
     for (auto hit: hits) {
-        std::cout << "Hit " << hit.healthy_user_id << " vs " 
+        std::cout << "HIT " << hit.healthy_user_id << " vs " 
             << hit.infected_user_id << std::endl;
+        std::cout << "Healthy rows:" << std::endl;
+        for (auto row: search_proc.read_user_rows(hit.healthy_user_id)) {
+            print_row(row);
+        }
+        std::cout << "Infected rows:" << std::endl;
+        for (auto row: search_proc.read_user_rows(hit.infected_user_id)) {
+            print_row(row);
+        }
+        std::cout << std::endl;
     }
+
+    all_writer.close();
 }
 
 }

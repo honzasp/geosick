@@ -32,7 +32,7 @@ Sampler::Sampler(UtcTime begin_time, UtcTime end_time, DurationS period)
 }
 
 void
-Sampler::sample(const ArrayView<GeoRow> rows, std::vector<GeoSample>& out_samples) const
+Sampler::sample(ArrayView<const GeoRow> rows, std::vector<GeoSample>& out_samples) const
 {
     assert(std::is_sorted(rows.begin(), rows.end(),
         [](const auto& lhs, const auto& rhs) {

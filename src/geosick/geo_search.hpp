@@ -1,5 +1,5 @@
 #pragma once
-#include "sampler.hpp"
+#include "geosick/sampler.hpp"
 
 namespace geosick {
 
@@ -7,6 +7,7 @@ class GeoSearch {
 private:
     struct UserGeoPoint {
         GeoSample::UserID user_id;
+        uint32_t time_index;
         int32_t lat, lon;
         uint16_t accuracy_m;
     };

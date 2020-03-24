@@ -77,7 +77,7 @@ GeoSample
 Sampler::get_weighted_sample(const GeoRow& row, const GeoRow& next_row,
         DurationS row_offset, DurationS next_row_offset, DurationS offset) const
 {
-    assert(offset > DurationS(0));
+    assert(offset >= DurationS(0));
     assert(offset % m_period == DurationS(0));
     assert(row_offset <= offset);
     assert(offset <= next_row_offset);
@@ -89,7 +89,7 @@ Sampler::get_weighted_sample(const GeoRow& row, const GeoRow& next_row,
     assert(0 <= w2 && w2 <= 1);
 
     return GeoSample{
-        .time_frame_id = uint32_t(offset / m_period),
+        .time_index = uint32_t(offset / m_period),
         .user_id = row.user_id,
         .lat = int32_t(w1*row.lat + w2*next_row.lat),
         .lon = int32_t(w1*row.lon + w2*next_row.lon),

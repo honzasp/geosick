@@ -1,14 +1,14 @@
 #pragma once
 #include <vector>
 #include <chrono>
-#include "geo_row.hpp"
-#include "slice.hpp"
+#include "geosick/geo_row.hpp"
+#include "geosick/slice.hpp"
 
 namespace geosick {
 
 struct GeoSample {
     using UserID = uint32_t;
-    uint32_t time_frame_id;
+    uint32_t time_index;
     UserID user_id;
     int32_t lat;
     int32_t lon;

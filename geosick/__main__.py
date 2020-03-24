@@ -70,8 +70,8 @@ def response_to_json(resp: Response):
 def step_to_json(step: Step):
     return {
         "timestamp": step.timestamp,
-        "sick_point": point_to_json(step.sick_point),
-        "query_point": point_to_json(step.query_point),
+        "sick_point": point_to_json(step.sick_point) if step.sick_point else None,
+        "query_point": point_to_json(step.query_point) if step.query_point else None,
         "risk": step.risk,
         "distance": step.distance,
     }

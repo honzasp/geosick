@@ -8,6 +8,7 @@
 
 namespace geosick {
 
+/*
 static void print_row(const GeoRow& row) {
     std::cout << "Row"
         << ": user " << row.user_id
@@ -17,9 +18,10 @@ static void print_row(const GeoRow& row) {
         << ", accuracy " << row.accuracy_m
         << ", altitude " << row.altitude_m
         << ", heading " << row.heading_deg
-        << ", speed " << row.speed_mps
+        << ", velocity " << row.velocity_mps
         << std::endl;
 }
+*/
 
 static std::vector<GeoSample> rows_to_samples(
     const Sampler& sampler, const std::vector<GeoRow>& rows)
@@ -38,6 +40,39 @@ static std::vector<GeoSample> rows_to_samples(
         user_begin = user_end;
     }
     return samples;
+}
+
+static void row_to_json(FILE* out, const GeoRow& row) {
+    std::fprintf(out,
+        "{\"timestamp_ms\": %u000,"
+        "\"latitude_e7\": %u,"
+        "\"longitude_e7\": %u,"
+        "\"accuracy_m\": %u,"
+        "\"velocity_mps\": %g",
+        row.timestamp_utc_s,
+        row.lat, row.lon,
+        row.accuracy_m, row.velocity_mps);
+    if (row.heading_deg != UINT16_MAX) {
+        std::fprintf(out, ",\"heading_deg\": %u", row.heading_deg);
+    }
+    std::fprintf(out, "}");
+}
+
+static void request_to_json(FILE* out,
+    const std::vector<GeoRow>& infected_rows,
+    const std::vector<GeoRow>& healthy_rows)
+{
+    std::fprintf(out, "{\"sick_geopoints\": [");
+    for (size_t i = 0; i < infected_rows.size(); ++i) {
+        if (i != 0) { std::fprintf(out, ", "); }
+        row_to_json(out, infected_rows.at(i));
+    }
+    std::fprintf(out, "], \"query_geopoints\": [");
+    for (size_t i = 0; i < healthy_rows.size(); ++i) {
+        if (i != 0) { std::fprintf(out, ", "); }
+        row_to_json(out, healthy_rows.at(i));
+    }
+    std::fprintf(out, "]}");
 }
 
 static void main() {
@@ -66,17 +101,11 @@ static void main() {
 
     auto hits = search_proc.read_hits();
     for (auto hit: hits) {
-        std::cout << "HIT " << hit.healthy_user_id << " vs " 
-            << hit.infected_user_id << std::endl;
-        std::cout << "Healthy rows:" << std::endl;
-        for (auto row: search_proc.read_user_rows(hit.healthy_user_id)) {
-            print_row(row);
-        }
-        std::cout << "Infected rows:" << std::endl;
-        for (auto row: search_proc.read_user_rows(hit.infected_user_id)) {
-            print_row(row);
-        }
-        std::cout << std::endl;
+        if (hit.healthy_user_id == hit.infected_user_id) { continue; }
+        auto healthy_rows = search_proc.read_user_rows(hit.healthy_user_id);
+        auto infected_rows = search_proc.read_user_rows(hit.infected_user_id);
+        request_to_json(stdout, infected_rows, healthy_rows);
+        std::fprintf(stdout, "\n");
     }
 
     all_writer.close();

@@ -8,10 +8,10 @@ struct GeoRow {
     uint32_t timestamp_utc_s;
     int32_t lat;
     int32_t lon;
-    uint16_t accuracy_m = UINT16_MAX;
+    uint16_t accuracy_m;
     uint16_t altitude_m = UINT16_MAX;
     uint16_t heading_deg = UINT16_MAX;
-    float speed_mps = 0;
+    float velocity_mps = 0;
 };
 
 }

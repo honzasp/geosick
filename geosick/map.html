@@ -36,7 +36,6 @@ body {
 
 #map {
   flex: auto;
-  background-color: #ddf;
   height: 100%;
 }
 
@@ -229,7 +228,7 @@ function setResponse(requestJson, responseJson) {
 
   function addCircle(color) {
     return L.circle([0, 0],
-      {color: color, fill: true, stroke: false, fillOpacity: 0.6}).addTo(map);
+      {color: color, fill: true, stroke: false, fillOpacity: 0.6});
   }
 
   addSamples(mapRequest.sick_geopoints, SICK_COLOR);
@@ -249,14 +248,24 @@ function setStep(idx) {
   } else if (idx >= mapResponse.steps.length) {
     idx = mapResponse.steps.length - 1;
   }
-
   var step = mapResponse.steps[idx];
+
   var sick_p = step.sick_point;
+  if (sick_p) {
+    sickCircle.setLatLng([sick_p.latitude_e7*1e-7, sick_p.longitude_e7*1e-7])
+      .setRadius(sick_p.radius).addTo(mapLayer);
+  } else {
+    sickCircle.remove();
+  }
+
   var query_p = step.query_point;
-  sickCircle.setLatLng([sick_p.latitude_e7*1e-7, sick_p.longitude_e7*1e-7])
-    .setRadius(sick_p.radius);
-  queryCircle.setLatLng([query_p.latitude_e7*1e-7, query_p.longitude_e7*1e-7])
-    .setRadius(query_p.radius);
+  if (query_p) {
+    queryCircle.setLatLng([query_p.latitude_e7*1e-7, query_p.longitude_e7*1e-7])
+      .setRadius(query_p.radius).addTo(mapLayer);
+  } else {
+    queryCircle.remove();
+  }
+
   setSidebarStep(step);
 
   if (sliderElem.valueAsNumber != idx) {
@@ -323,7 +332,7 @@ function setSidebarStep(step) {
     : "n/a";
   sidebarElems.risk.innerText = step
     ? step.risk.toFixed(3) : "n/a";
-  sidebarElems.distance.innerText = step
+  sidebarElems.distance.innerText = step && step.distance !== null
     ? step.distance.toFixed(1) + " m" : "n/a";
 }
 

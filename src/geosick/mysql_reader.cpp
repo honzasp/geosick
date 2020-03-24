@@ -28,14 +28,12 @@ std::optional<GeoRow> MysqlReader::read() {
     res.timestamp_utc_s = row.at(1);
     res.lat = row.at(2);
     res.lon = row.at(3);
-    if (!row.at(4).is_null()) {
-        res.accuracy_m = row.at(4);
-    }
+    res.accuracy_m = !row.at(4).is_null() ? row.at(4) : 50;
     if (!row.at(5).is_null()) {
         res.heading_deg = row.at(5);
     }
     if (!row.at(6).is_null()) {
-        res.speed_mps = row.at(6);
+        res.velocity_mps = row.at(6);
     }
     return res;
 }

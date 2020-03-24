@@ -12,7 +12,7 @@ MAX_DELTA_DISTANCE = 100.0
 # MAX_CLOSE_DISTANCE apart, in seconds
 MAX_DELTA_TIME = 5*60
 # Maximum distance between two points that is considered "close", in meters
-MAX_CLOSE_DISTANCE = 5.0
+MAX_CLOSE_DISTANCE = 50.0
 
 # Interpolates a list of samples into a stream of points at ctx.timestamps_ms
 def interpolate(ctx: Ctx, samples: List[UserSample]) -> PointStream:

@@ -56,14 +56,15 @@ Sampler::sample(const std::vector<GeoRow>& rows) const
         }
 
         auto row_offset = row_timestamp - m_begin_time;
-        auto next_row_offset = row_timestamp - m_begin_time;
+        auto next_row_offset = next_row_timestamp - m_begin_time;
         assert(next_row_offset > DurationS(0));
 
         auto offset = DurationS(round_up(row_offset.count(), m_period.count()));
-        while (offset < DurationS(0)) {
+        while (offset < DurationS(0)) { // TODO: Use mode for negative numbers.
             offset += m_period;
         }
 
+        // TODO: Add continuity checking.
         for (; offset < next_row_offset && offset <= m_end_offset; offset += m_period) {
             samples.push_back(get_weighted_sample(row, next_row, row_offset, next_row_offset, offset));
         }
@@ -81,7 +82,7 @@ Sampler::get_weighted_sample(const GeoRow& row, const GeoRow& next_row,
     assert(offset <= next_row_offset);
 
     auto spread = next_row_offset - row_offset;
-    double w1 = double((offset - row_offset).count()) / spread.count();
+    double w1 = 1 - double((offset - row_offset).count()) / spread.count();
     double w2 = 1 - w1;
     assert(0 <= w1 && w1 <= 1);
     assert(0 <= w2 && w2 <= 1);

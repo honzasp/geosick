@@ -1,22 +1,23 @@
 ## Geosick Service
 
-Geosick is a service written for the Covid19cz initiative by Jan Plhák (jan.plhak@distributa.io)
-and Jan Špaček (patek.mail@gmail.com) from [Distributa.io](www.distributa.io).
-The purpose of the service is to analyze two Geopoint sequencies (one sequence from a healthy person
-and one from a person infected by the Covid19 virus) and determine the probability that the healthy
+Geosick is a service written for the Covid19cz initiative by Jan Plhák
+(jan.plhak@distributa.io) and Jan Špaček (patek.mail@gmail.com) from
+[Distributa.io](www.distributa.io).  The purpose of the service is to analyze
+two geopoint sequencies (one sequence from a healthy person and one from a
+person infected by the virus) and determine the probability that the healthy
 specimen was infected.
 
 ## Algorithm description
 
-![Alt text](docs/algorithm_description.png?raw=true "Algorithm description")
+![Description of the algoritm](docs/algorithm_description.png?raw=true "Algorithm description")
 
 ## How to run the server
 
-    python3.8 -m geosick --help
+    python3.8 -m geosick.evaluate_api --help
 
 ## API
 
-The API is very simplistic and implements only one endpoint:
+The API is very simple and implements only one endpoint:
 
     POST /v1/evaluate_risk
     ->  <request>
@@ -47,10 +48,11 @@ where
 
     <meeting-range> = [<integer>, <integer>]
 
-`score` is a probability of disease transmission.
-`minimal_distance_m` is the smallest distance the two people got to each other.
-`meeting_ranges_ms` represent time frames of possible contact between the two people
-(pretty much the time frames at which a transmission could occur with non-zero probability).
+- `score` is the estimated probability of disease transmission.
+- `minimal_distance_m` is the smallest distance the two people got to each other.
+- `meeting_ranges_ms` represent time frames of possible contact between the two
+  people (pretty much the time frames at which a transmission could occur with
+  non-zero probability).
 
 ## Examples
 

@@ -18,7 +18,7 @@ boost_dep = dependency('boost')
 sources = files(
   'src/geosick/geo_distance.cpp',
   'src/geosick/geo_search.cpp',
-  'src/geosick/main.cpp',
+  'src/geosick/main_zostanzdravy.cpp',
   'src/geosick/mysql_reader.cpp',
   'src/geosick/read_process.cpp',
   'src/geosick/sampler.cpp',
@@ -29,7 +29,7 @@ includes = include_directories(
   'extern/include',
 )
 
-executable('geosick', sources,
+executable('zostanzdravy', sources,
   include_directories: includes,
   dependencies: [mysql_dep, mysqlpp_dep, stdcppfs_dep, boost_dep],
   override_options: ['cpp_std=c++17'],

@@ -1,3 +1,4 @@
+#include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include "geosick/file_writer.hpp"
@@ -74,9 +75,16 @@ static nlohmann::json request_to_json(
     return doc;
 }
 
-static void main() {
-    nlohmann::json config_doc;
-    std::cin >> config_doc;
+static void main(int argc, char** argv) {
+    if (argc != 3) {
+        std::cerr << "Usage: " << argv[0] << " <config-file> <output-file>" << std::endl;
+        throw std::runtime_error("Bad usage");
+    }
+
+    nlohmann::json config_doc; {
+        std::ifstream config_file(argv[1]);
+        config_file >> config_doc;
+    }
     Config cfg = config_from_json(config_doc);
 
     std::filesystem::path temp_dir = cfg.temp_dir;
@@ -102,21 +110,22 @@ static void main() {
     }
     search_proc.process_end();
 
-    auto hits = search_proc.read_hits();
-    for (auto hit: hits) {
-        //if (hit.query_user_id == hit.sick_user_id) { continue; }
-        auto query_rows = search_proc.read_user_rows(hit.query_user_id);
-        auto sick_rows = search_proc.read_user_rows(hit.sick_user_id);
-        std::cout << request_to_json(sick_rows, query_rows) << std::endl;
-    }
+    auto hits = search_proc.read_hits(); {
+        std::ofstream output_file(argv[2]);
+        for (auto hit: hits) {
+            auto query_rows = search_proc.read_user_rows(hit.query_user_id);
+            auto sick_rows = search_proc.read_user_rows(hit.sick_user_id);
+            output_file << request_to_json(sick_rows, query_rows) << std::endl;
+        }
+    };
     all_writer.close();
 }
 
 }
 
-int main() {
+int main(int argc, char** argv) {
     try {
-        geosick::main();
+        geosick::main(argc, argv);
     } catch (std::exception& e) {
         std::cerr << "Exception: " << e.what() << std::endl;
         return 1;

@@ -13,7 +13,7 @@ big-scale sequence processing. For that, please see our
 
 ## Algorithm description
 
-![Description of the algoritm](docs/algorithm_description.png?raw=true "Algorithm description")
+![Description of the algoritm](algorithm_description.png?raw=true "Algorithm description")
 
 ## API
 

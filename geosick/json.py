@@ -12,6 +12,18 @@ def sample_from_json(geo_json) -> UserSample:
         is_end=geo_json.get("is_end", False),
     )
 
+def sample_to_json(sample: UserSample):
+    return {
+        "timestamp_ms": sample.timestamp_ms,
+        "latitude_e7": sample.latitude_e7,
+        "longitude_e7": sample.longitude_e7,
+        "accuracy_m": sample.accuracy_m,
+        "velocity_mps": sample.velocity_mps,
+        "heading_deg": sample.heading_deg,
+        "is_end": sample.is_end,
+    }
+
+
 def request_from_json(req_json) -> Request:
     return Request(
         sick_samples=[
@@ -32,6 +44,7 @@ def request_to_json(req):
         "query_geopoints": [sample_to_json(s) for s in req.query_samples],
         "full": req.full,
     }
+
 
 def response_to_json(resp: Response):
     return {
@@ -59,16 +72,4 @@ def point_to_json(point: Point):
         "latitude_e7": point.latitude_e7,
         "longitude_e7": point.longitude_e7,
     }
-
-def sample_to_json(sample: UserSample):
-    return {
-        "timestamp_ms": sample.timestamp_ms,
-        "latitude_e7": sample.latitude_e7,
-        "longitude_e7": sample.longitude_e7,
-        "accuracy_m": sample.accuracy_m,
-        "velocity_mps": sample.velocity_mps,
-        "heading_deg": sample.heading_deg,
-        "is_end": sample.is_end,
-    }
-
 

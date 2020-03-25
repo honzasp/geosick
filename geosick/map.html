@@ -60,6 +60,9 @@ body {
   flex: auto;
   margin: 0 8px;
 }
+
+.sick-color { color: #f7522d; }
+.query-color { color: #4287f5; }
 </style>
 </head>
 
@@ -82,8 +85,10 @@ body {
         </div>
         <div class="sidebar-box">
           Čas: <span id="timestamp"></span><br>
-          Aktuální risk: <span id="risk"></span><br>
-          Aktuální vzdálenost: <span id="distance"></span><br>
+          Riziko: <span id="risk"></span><br>
+          Vzdálenost: <span id="distance"></span><br>
+          <span class="query-color">Uživatel: <span id="query-pos"></span></span><br>
+          <span class="sick-color">Nakažený: <span id="sick-pos"></span></span><br>
         </div>
       </div>
 
@@ -102,6 +107,7 @@ body {
   </div>
 
 <script>
+;(function(){
 
 /// initialization
 
@@ -126,6 +132,8 @@ var sidebarElems = {
   timestamp: document.getElementById("timestamp"),
   risk: document.getElementById("risk"),
   distance: document.getElementById("distance"),
+  query_pos: document.getElementById("query-pos"),
+  sick_pos: document.getElementById("sick-pos"),
 };
 
 /// communication with the server
@@ -184,8 +192,8 @@ function sendRequest(requestJson) {
 
 /// displaying the request and response on the map
 
-var SICK_COLOR = "#f00";
-var QUERY_COLOR = "#00f";
+var SICK_COLOR = "#f7522d";
+var QUERY_COLOR = "#4287f5";
 
 var mapLayer = null;
 var mapRequest = null;
@@ -213,7 +221,13 @@ function setResponse(requestJson, responseJson) {
     var latlngs = [];
     for (var sample of samples) {
       if (sample) {
-        latlngs.push([sample.latitude_e7*1e-7, sample.longitude_e7*1e-7])
+        var lat_lng = [sample.latitude_e7*1e-7, sample.longitude_e7*1e-7];
+        L.circle(lat_lng, {
+          fill: true, stroke: false,
+          color: color, fillOpacity: 0.4,
+          radius: sample.accuracy_m,
+        }).addTo(mapLayer);
+        latlngs.push([sample.latitude_e7*1e-7, sample.longitude_e7*1e-7]);
       } else {
         addPolyline(latlngs, color);
         latlngs = []
@@ -223,18 +237,11 @@ function setResponse(requestJson, responseJson) {
   }
 
   function addPolyline(latlngs, color) {
-    mapLayer.addLayer(L.polyline(latlngs, {color: color}));
-  }
-
-  function addCircle(color) {
-    return L.circle([0, 0],
-      {color: color, fill: true, stroke: false, fillOpacity: 0.6});
+    mapLayer.addLayer(L.polyline(latlngs, {color: color, opacity: 0.4}));
   }
 
   addSamples(mapRequest.sick_geopoints, SICK_COLOR);
   addSamples(mapRequest.query_geopoints, QUERY_COLOR);
-  sickCircle = addCircle(SICK_COLOR);
-  queryCircle = addCircle(QUERY_COLOR);
   sliderElem.min = 0;
   sliderElem.max = mapResponse.steps.length - 1;
 
@@ -250,20 +257,23 @@ function setStep(idx) {
   }
   var step = mapResponse.steps[idx];
 
+  if (sickCircle) { sickCircle.remove(); }
+  if (queryCircle) { queryCircle.remove(); }
+
+  function addCircle(point, color) {
+    return L.circle([point.latitude_e7*1e-7, point.longitude_e7*1e-7], {
+      color: color, fill: true, stroke: false, fillOpacity: 0.8
+    }).setRadius(point.radius).addTo(mapLayer);
+  }
+
   var sick_p = step.sick_point;
   if (sick_p) {
-    sickCircle.setLatLng([sick_p.latitude_e7*1e-7, sick_p.longitude_e7*1e-7])
-      .setRadius(sick_p.radius).addTo(mapLayer);
-  } else {
-    sickCircle.remove();
+    sickCircle = addCircle(sick_p, SICK_COLOR);
   }
 
   var query_p = step.query_point;
   if (query_p) {
-    queryCircle.setLatLng([query_p.latitude_e7*1e-7, query_p.longitude_e7*1e-7])
-      .setRadius(query_p.radius).addTo(mapLayer);
-  } else {
-    queryCircle.remove();
+    queryCircle = addCircle(query_p, QUERY_COLOR);
   }
 
   setSidebarStep(step);
@@ -334,6 +344,18 @@ function setSidebarStep(step) {
     ? step.risk.toFixed(3) : "n/a";
   sidebarElems.distance.innerText = step && step.distance !== null
     ? step.distance.toFixed(1) + " m" : "n/a";
+  sidebarElems.query_pos.innerText = step && step.query_point !== null
+    ? formatLatLng(step.query_point.latitude_e7, step.query_point.longitude_e7) : "n/a";
+  sidebarElems.sick_pos.innerText = step && step.sick_point !== null
+    ? formatLatLng(step.sick_point.latitude_e7, step.sick_point.longitude_e7) : "n/a";
+}
+
+function formatLatLng(lat_e7, lng_e7) {
+  var lat_dir = lat_e7 > 0 ? "N" : "S";
+  var lat_number = (Math.abs(lat_e7)*1e-7).toFixed(7);
+  var lng_dir = lng_e7 > 0 ? "E" : "W";
+  var lng_number = (Math.abs(lng_e7)*1e-7).toFixed(7);
+  return lat_number+lat_dir + ", " + lng_number+lng_dir;
 }
 
 function setStatus(msg) {
@@ -346,6 +368,7 @@ function reportError(msg) {
 
 setResponse(null);
 setStatus("Vyberte prosím soubor");
+})();
 </script>
 
 </body>

@@ -9,23 +9,28 @@ using Hit = SearchProcess::Hit;
 using HitHash = SearchProcess::HitHash;
 
 SearchProcess::SearchProcess(const Sampler* sampler,
-    const GeoSearch* search, FileWriter* writer)
-: m_sampler(sampler), m_search(search), m_writer(writer) {}
+    const GeoSearch* search, FileWriter* writer,
+    const std::unordered_set<uint32_t>* sick_user_ids):
+    m_sampler(sampler), m_search(search),
+    m_writer(writer), m_sick_user_ids(sick_user_ids) {}
 
 
 void SearchProcess::flush_user_rows() {
     m_user_offsets.emplace_back(m_current_user_id, m_writer->get_offset());
     m_writer->write(make_view(m_current_rows));
 
-    m_sampler->sample(make_view(m_current_rows), m_current_samples);
-    for (const auto& sample: m_current_samples) {
-        auto sick_ids = m_search->find_users_within_circle(
-            sample.lat, sample.lon, sample.accuracy_m, sample.time_index);
-        for (uint32_t sick_id: sick_ids) {
-            m_hits.emplace(sample.user_id, sick_id);
+    if (!m_sick_user_ids->count(m_current_user_id)) {
+        m_sampler->sample(make_view(m_current_rows), m_current_samples);
+        for (const auto& sample: m_current_samples) {
+            auto sick_ids = m_search->find_users_within_circle(
+                sample.lat, sample.lon, sample.accuracy_m, sample.time_index);
+            for (uint32_t sick_id: sick_ids) {
+                m_hits.emplace(sample.user_id, sick_id);
+            }
         }
+        m_current_samples.clear();
     }
-    m_current_samples.clear();
+
     m_current_rows.clear();
 }
 

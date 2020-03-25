@@ -104,7 +104,7 @@ static void main(int argc, char** argv) {
     GeoSearch search(sick_samples);
 
     FileWriter all_writer(temp_dir / "all_rows.bin");
-    SearchProcess search_proc(&sampler, &search, &all_writer);
+    SearchProcess search_proc(&sampler, &search, &all_writer, &sick_user_ids);
     auto proc_reader = read_proc.read_all_rows();
     while (auto row = proc_reader->read()) {
         search_proc.process_row(*row);

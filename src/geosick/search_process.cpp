@@ -19,10 +19,10 @@ void SearchProcess::flush_user_rows() {
 
     m_sampler->sample(make_view(m_current_rows), m_current_samples);
     for (const auto& sample: m_current_samples) {
-        auto infected_ids = m_search->find_users_within_circle(
+        auto sick_ids = m_search->find_users_within_circle(
             sample.lat, sample.lon, sample.accuracy_m, sample.time_index);
-        for (uint32_t infected_id: infected_ids) {
-            m_hits.emplace(sample.user_id, infected_id);
+        for (uint32_t sick_id: sick_ids) {
+            m_hits.emplace(sample.user_id, sick_id);
         }
     }
     m_current_samples.clear();

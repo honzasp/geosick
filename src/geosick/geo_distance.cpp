@@ -1,4 +1,4 @@
-#include "geosick/gps_distance.hpp"
+#include "geosick/geo_distance.hpp"
 
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -18,7 +18,7 @@ double degree_to_radian(int32_t angle_int) {
 
 } // END OF ANONYMOUS NAMESPACE
 
-double gps_distance_haversine_m(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2) {
+double geo_distance_haversine_m(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2) {
     static constexpr double earth_radius_m = 6372.8 * 1000;
 
     double lat_rad1 = degree_to_radian(lat1);
@@ -36,7 +36,7 @@ double gps_distance_haversine_m(int32_t lat1, int32_t lon1, int32_t lat2, int32_
 	return 2 * earth_radius_m * computation;
 }
 
-double pow2_gps_distance_fast_m(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2) {
+double pow2_geo_distance_fast_m(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2) {
     static constexpr double lat_deg_e7_to_m = 0.0111132; // at latitude 45 deg, negligible variation with latitude
     double lat_rad = lat2 / 174533.;
     double lon_deg_e7_to_m = 0.0111319 * cos(lat_rad);

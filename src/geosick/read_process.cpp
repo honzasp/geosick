@@ -16,11 +16,11 @@ namespace {
     };
 }
 
-ReadProcess::ReadProcess(std::unordered_set<uint32_t> infected_user_ids,
+ReadProcess::ReadProcess(std::unordered_set<uint32_t> sick_user_ids,
     std::filesystem::path temp_dir,
     size_t row_buffer_size
 ):
-    m_infected_user_ids(std::move(infected_user_ids)),
+    m_sick_user_ids(std::move(sick_user_ids)),
     m_temp_dir(std::move(temp_dir)),
     m_row_buffer_size(row_buffer_size)
 {}
@@ -41,8 +41,8 @@ void ReadProcess::flush_buffer() {
 void ReadProcess::process(GeoRowReader& reader) {
     m_row_buffer.reserve(m_row_buffer_size);
     while (auto row = reader.read()) {
-        if (m_infected_user_ids.count(row->user_id)) {
-            m_infected_rows.push_back(*row);
+        if (m_sick_user_ids.count(row->user_id)) {
+            m_sick_rows.push_back(*row);
         }
 
         m_min_timestamp = std::min(m_min_timestamp, row->timestamp_utc_s);
@@ -57,7 +57,7 @@ void ReadProcess::process(GeoRowReader& reader) {
         this->flush_buffer();
     }
 
-    std::sort(m_infected_rows.begin(), m_infected_rows.end(), CompareRows());
+    std::sort(m_sick_rows.begin(), m_sick_rows.end(), CompareRows());
 }
 
 std::unique_ptr<GeoRowReader> ReadProcess::read_all_rows() {
@@ -69,8 +69,8 @@ std::unique_ptr<GeoRowReader> ReadProcess::read_all_rows() {
     return merger;
 }
 
-std::vector<GeoRow> ReadProcess::read_infected_rows() {
-    return std::move(m_infected_rows);
+std::vector<GeoRow> ReadProcess::read_sick_rows() {
+    return std::move(m_sick_rows);
 }
 
 }

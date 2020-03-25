@@ -1,6 +1,7 @@
 project('geosick', 'cpp')
 cpp = meson.get_compiler('cpp')
 
+
 mysql_dep = dependency('mysqlclient')
 
 mysqlpp_includes = include_directories('/usr/include/mysql++')
@@ -11,19 +12,22 @@ mysqlpp_dep = declare_dependency(
 )
 
 stdcppfs_dep = cpp.find_library('stdc++fs')
-
 boost_dep = dependency('boost')
 
+
 sources = files(
+  'src/geosick/geo_distance.cpp',
   'src/geosick/geo_search.cpp',
-  'src/geosick/gps_distance.cpp',
   'src/geosick/main.cpp',
   'src/geosick/mysql_reader.cpp',
   'src/geosick/read_process.cpp',
   'src/geosick/sampler.cpp',
   'src/geosick/search_process.cpp',
 )
-includes = include_directories('src')
+includes = include_directories(
+  'src',
+  'extern/include',
+)
 
 executable('geosick', sources,
   include_directories: includes,

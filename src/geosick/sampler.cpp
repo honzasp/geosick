@@ -1,5 +1,5 @@
 #include "geosick/sampler.hpp"
-#include "geosick/gps_distance.hpp"
+#include "geosick/geo_distance.hpp"
 #include <algorithm>
 #include <cassert>
 
@@ -55,7 +55,7 @@ Sampler::sample(ArrayView<const GeoRow> rows, std::vector<GeoSample>& out_sample
         const auto row_timestamp = UtcTime(DurationS(row.timestamp_utc_s));
         const auto next_row_timestamp = UtcTime(DurationS(next_row.timestamp_utc_s));
         const auto time_delta = next_row_timestamp - row_timestamp;
-        const auto distance_m_pow2 = pow2_gps_distance_fast_m(row.lat, row.lon, next_row.lat, next_row.lon);
+        const auto distance_m_pow2 = pow2_geo_distance_fast_m(row.lat, row.lon, next_row.lat, next_row.lon);
 
         if (row_timestamp > m_end_time) {
             break;

@@ -1,4 +1,5 @@
 #include <iostream>
+#include <nlohmann/json.hpp>
 #include "geosick/file_writer.hpp"
 #include "geosick/geo_search.hpp"
 #include "geosick/mysql_reader.hpp"
@@ -8,20 +9,35 @@
 
 namespace geosick {
 
-/*
-static void print_row(const GeoRow& row) {
-    std::cout << "Row"
-        << ": user " << row.user_id
-        << ", timestamp " << row.timestamp_utc_s
-        << ", lat " << row.lat
-        << ", lon " << row.lon
-        << ", accuracy " << row.accuracy_m
-        << ", altitude " << row.altitude_m
-        << ", heading " << row.heading_deg
-        << ", velocity " << row.velocity_mps
-        << std::endl;
+static Config config_from_json(const nlohmann::json& doc) {
+    Config cfg;
+    cfg.mysql.db = doc["mysql"]["db"].get<std::string>();
+    cfg.mysql.host = doc["mysql"]["host"].get<std::string>();
+    cfg.mysql.port = doc["mysql"]["port"].get<uint32_t>();
+    cfg.mysql.user = doc["mysql"]["user"].get<std::string>();
+    cfg.mysql.password = doc["mysql"]["password"].get<std::string>();
+    cfg.range_days = doc["range_days"].get<uint32_t>();
+    cfg.period_s = doc["period_s"].get<uint32_t>();
+    cfg.temp_dir = doc["temp_dir"].get<std::string>();
+    return cfg;
 }
-*/
+
+static nlohmann::json row_to_json(const GeoRow& row) {
+    nlohmann::json doc = {
+        {"timestamp_ms", int64_t(row.timestamp_utc_s) * 1000},
+        {"latitude_e7", row.lat},
+        {"longitude_e7", row.lon},
+        {"accuracy_m", row.accuracy_m},
+    };
+    if (row.altitude_m != UINT16_MAX) {
+        doc["altitude_m"] = row.altitude_m;
+    }
+    if (row.heading_deg != UINT16_MAX) {
+        doc["heading_deg"] = row.heading_deg;
+    }
+    doc["velocity_mps"] = row.velocity_mps;
+    return doc;
+}
 
 static std::vector<GeoSample> rows_to_samples(
     const Sampler& sampler, const std::vector<GeoRow>& rows)
@@ -42,54 +58,41 @@ static std::vector<GeoSample> rows_to_samples(
     return samples;
 }
 
-static void row_to_json(FILE* out, const GeoRow& row) {
-    std::fprintf(out,
-        "{\"timestamp_ms\": %u000,"
-        "\"latitude_e7\": %u,"
-        "\"longitude_e7\": %u,"
-        "\"accuracy_m\": %u,"
-        "\"velocity_mps\": %g",
-        row.timestamp_utc_s,
-        row.lat, row.lon,
-        row.accuracy_m, row.velocity_mps);
-    if (row.heading_deg != UINT16_MAX) {
-        std::fprintf(out, ",\"heading_deg\": %u", row.heading_deg);
-    }
-    std::fprintf(out, "}");
-}
-
-static void request_to_json(FILE* out,
-    const std::vector<GeoRow>& infected_rows,
-    const std::vector<GeoRow>& healthy_rows)
+static nlohmann::json request_to_json(
+    const std::vector<GeoRow>& sick_rows,
+    const std::vector<GeoRow>& query_rows)
 {
-    std::fprintf(out, "{\"sick_geopoints\": [");
-    for (size_t i = 0; i < infected_rows.size(); ++i) {
-        if (i != 0) { std::fprintf(out, ", "); }
-        row_to_json(out, infected_rows.at(i));
+    nlohmann::json doc;
+    doc["sick_geopoints"] = nlohmann::json::array();
+    for (const auto& row: sick_rows) {
+        doc["sick_geopoints"].push_back(row_to_json(row));
     }
-    std::fprintf(out, "], \"query_geopoints\": [");
-    for (size_t i = 0; i < healthy_rows.size(); ++i) {
-        if (i != 0) { std::fprintf(out, ", "); }
-        row_to_json(out, healthy_rows.at(i));
+    doc["query_geopoints"] = nlohmann::json::array();
+    for (const auto& row: query_rows) {
+        doc["query_geopoints"].push_back(row_to_json(row));
     }
-    std::fprintf(out, "]}");
+    return doc;
 }
 
 static void main() {
-    std::filesystem::path temp_dir = "/tmp/geosick";
-    std::unordered_set<uint32_t> infected_user_ids {5, 7};
-    ReadProcess read_proc(infected_user_ids, temp_dir, 10); {
-        MysqlReader mysql("zostanzdravy_app", "127.0.0.1", 3306, "root", "");
+    nlohmann::json config_doc;
+    std::cin >> config_doc;
+    Config cfg = config_from_json(config_doc);
+
+    std::filesystem::path temp_dir = cfg.temp_dir;
+    std::unordered_set<uint32_t> sick_user_ids {5, 7};
+    ReadProcess read_proc(sick_user_ids, temp_dir, 10); {
+        MysqlReader mysql(cfg);
         read_proc.process(mysql);
     }
 
     auto end_time = UtcTime(DurationS(read_proc.get_max_timestamp()));
-    auto begin_time = end_time - DurationS(60*60);
-    auto period = DurationS(60);
+    auto begin_time = end_time - DurationS(24*60*60 * cfg.range_days);
+    auto period = DurationS(cfg.period_s);
     Sampler sampler(begin_time, end_time, period);
 
-    auto infected_samples = rows_to_samples(sampler, read_proc.read_infected_rows());
-    GeoSearch search(infected_samples);
+    auto sick_samples = rows_to_samples(sampler, read_proc.read_sick_rows());
+    GeoSearch search(sick_samples);
 
     FileWriter all_writer(temp_dir / "all_rows.bin");
     SearchProcess search_proc(&sampler, &search, &all_writer);
@@ -101,13 +104,11 @@ static void main() {
 
     auto hits = search_proc.read_hits();
     for (auto hit: hits) {
-        if (hit.healthy_user_id == hit.infected_user_id) { continue; }
-        auto healthy_rows = search_proc.read_user_rows(hit.healthy_user_id);
-        auto infected_rows = search_proc.read_user_rows(hit.infected_user_id);
-        request_to_json(stdout, infected_rows, healthy_rows);
-        std::fprintf(stdout, "\n");
+        //if (hit.query_user_id == hit.sick_user_id) { continue; }
+        auto query_rows = search_proc.read_user_rows(hit.query_user_id);
+        auto sick_rows = search_proc.read_user_rows(hit.sick_user_id);
+        std::cout << request_to_json(sick_rows, query_rows) << std::endl;
     }
-
     all_writer.close();
 }
 

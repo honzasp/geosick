@@ -1,5 +1,5 @@
 #include "geosick/geo_search.hpp"
-#include "geosick/gps_distance.hpp"
+#include "geosick/geo_distance.hpp"
 
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -16,14 +16,14 @@ int32_t pow2(int32_t x) {
 bool
 circles_intersect(int32_t lat1, int32_t lon1, int32_t r1, int32_t lat2, int32_t lon2, int32_t r2)
 {
-    return gps_distance_haversine_m(lat1, lon1, lat2, lon2) <= r1 + r2;
+    return geo_distance_haversine_m(lat1, lon1, lat2, lon2) <= r1 + r2;
 }
 */
 
 bool
 circles_intersect_fast(int32_t lat1, int32_t lon1, int32_t r1, int32_t lat2, int32_t lon2, int32_t r2)
 {
-    return pow2_gps_distance_fast_m(lat1, lon1, lat2, lon2) <= pow2(r1 + r2);
+    return pow2_geo_distance_fast_m(lat1, lon1, lat2, lon2) <= pow2(r1 + r2);
 }
 
 } // END OF ANONYMOUS NAMESPACE
@@ -104,7 +104,7 @@ GeoSearch::get_lat_delta() {
     static constexpr int32_t lon1 = 165000000;
     static constexpr int32_t lat2 = lat1;
     static constexpr int32_t lon2 = 166000000;
-    auto angle_per_meter = abs(lon1 - lon2) / gps_distance_haversine_m(lat1, lon1, lat2, lon2);
+    auto angle_per_meter = abs(lon1 - lon2) / geo_distance_haversine_m(lat1, lon1, lat2, lon2);
     return angle_per_meter * GPS_HASH_PRECISION_M;
 }
 
@@ -114,7 +114,7 @@ GeoSearch::get_lon_delta() {
     static constexpr int32_t lon1 = 165000000;
     static constexpr int32_t lat2 = 492000000;
     static constexpr int32_t lon2 = lon1;
-    auto angle_per_meter = abs(lat1 - lat2) / gps_distance_haversine_m(lat1, lon1, lat2, lon2);
+    auto angle_per_meter = abs(lat1 - lat2) / geo_distance_haversine_m(lat1, lon1, lat2, lon2);
     return angle_per_meter * GPS_HASH_PRECISION_M;
 }
 

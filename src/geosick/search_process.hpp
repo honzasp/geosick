@@ -10,22 +10,22 @@ class GeoSearch;
 class SearchProcess {
 public:
     struct Hit {
-        uint32_t healthy_user_id;
-        uint32_t infected_user_id;
+        uint32_t query_user_id;
+        uint32_t sick_user_id;
 
-        Hit(uint32_t healthy_user_id, uint32_t infected_user_id):
-            healthy_user_id(healthy_user_id), infected_user_id(infected_user_id) {}
+        Hit(uint32_t query_user_id, uint32_t sick_user_id):
+            query_user_id(query_user_id), sick_user_id(sick_user_id) {}
 
         friend bool operator==(const Hit& h1, const Hit& h2) {
-            return h1.healthy_user_id == h2.healthy_user_id &&
-                h1.infected_user_id == h2.infected_user_id;
+            return h1.query_user_id == h2.query_user_id &&
+                h1.sick_user_id == h2.sick_user_id;
         }
     };
 
     struct HitHash {
         size_t operator()(const Hit& hit) const {
-            size_t h = (size_t)hit.healthy_user_id;
-            h ^= ((size_t)hit.infected_user_id) * 4093;
+            size_t h = (size_t)hit.query_user_id;
+            h ^= ((size_t)hit.sick_user_id) * 4093;
             return h;
         }
     };

@@ -2,10 +2,11 @@
 
 namespace geosick {
 
-MysqlReader::MysqlReader(const std::string& db, const std::string& host, unsigned port,
-    const std::string& user, const std::string& password)
+MysqlReader::MysqlReader(const Config& cfg)
 {
-    m_conn.connect(db.c_str(), host.c_str(), user.c_str(), password.c_str(), port);
+    m_conn.connect(cfg.mysql.db.c_str(), cfg.mysql.host.c_str(),
+        cfg.mysql.user.c_str(), cfg.mysql.password.c_str(),
+        cfg.mysql.port);
     mysqlpp::Query query = m_conn.query(R"(
         SELECT client_id,
             UNIX_TIMESTAMP(created_at),

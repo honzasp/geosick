@@ -1,0 +1,42 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage[latin1]{inputenc}
+
+\title{Getting started}
+\author{Veloci Raptor}
+\date{03/14/15}
+
+\begin{document}
+
+Our algorithm takes as input data two heterogenous seqences of GPS coordintes with accuracy and timestamps.
+We first normalize each of the sequences in such a manner that we obtain sequences with fixed time frequency (e.g. one GPS point every one minute.).
+The normalization is done by a linear interpolation between two consequitive GPS time-points (simple weighted average).
+
+The second stage is to compute a "probability" of disease transmission. That is done so that for every two time-matching GPS points we compute a separate probability of getting infected. The calculation is done by the following formula:
+
+\begin{equation}
+\Omega(t) = \alpha \pi R^2 \frac{|S_{1}^t \cap S_{2}^t|}{|S_1^t| |S_2^t|},
+\end{equation}
+
+where
+
+    R & is a maximal distance at which one can infect another person,
+
+    $ \alpha $  is the probability that a person is infected by another person at distance at most R in one minute,
+
+    $ S_1^t $ and $ S_2^t $ are the circles defined by the GPS center at time t and radius equal to the GPS accuracy (we assume uniform probability distribution within the accuracy space).
+
+\newline
+\newline
+The resulting probability of getting infected is then calculated as a product over all of the GPS time points:
+
+\begin{equation}
+P = 1-\prod_{t \in T}(1-\Omega(t)).
+\end{equation}
+
+(In practice we sum the logarithms of the probabilites to achieve higher accuracy).
+
+Another thing we take into consideration are the velocity vectors of the participating humans. In the current setup, if the absolute value of the vector difference of the two velocity vectors is higher than $ 3  ms^{-1}$, then we don't consider them as potentially infecting one another (they are likely to be just passing by each other by car or something similar).
+\end{document}

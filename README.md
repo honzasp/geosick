@@ -1,109 +1,23 @@
-## Geosick Service
+## Geosick
 
-Geosick is a service written for the Covid19cz initiative by Jan Plhák
-(jan.plhak@distributa.io) and Jan Špaček (patek.mail@gmail.com) from
-[distributa.io](https://www.distributa.io).  The purpose of the service is to analyze
-two geopoint sequencies (one sequence from a healthy person and one from a
-person infected by the virus) and determine the probability that the healthy
-specimen was infected.
+Geosick is a library written for the Covid19cz and ZostanZdravy initiatives by Jan Plhák
+(jan.plhak@kiwi.com) and Jan Špaček (patek.mail@gmail.com) from
+[distributa.io](https://www.distributa.io). The purpose of the library is to provide
+functionality for GPS sequencies analysis to determine the probability of a healthy person
+getting infected by someone sick (e.g. infected by the Covid19 virus). We provide two main
+services.
 
-## Algorithm description
+# HTTP Server
 
-![Description of the algoritm](docs/algorithm_description.png?raw=true "Algorithm description")
+Our HTTP server provides simple API for evaluating two sequencies of GPS locations and returns
+a probability with which one person was infected by another. More info in the
+[HTTP server docs](docs/http_server.md).
 
-## How to run the server
+# Batch processing
 
-    python3.8 -m geosick.evaluate_api --help
-
-## API
-
-The API is very simple and implements only one endpoint:
-
-    POST /v1/evaluate_risk
-    ->  <request>
-    <-  <response>
-
-where
-
-    <request> = {
-        "sick_geopoints": [<geopoint>, ...],
-        "query_geopoints": [<geopoint>, ...],
-    }
-
-    <geopoint> = {
-        "timestamp_ms": <integer>,
-        "latitude_e7": <integer>,
-        "longitude_e7": <integer>,
-        "accuracy_m": <float>,
-        "velocity_mps": <float>?,
-        "heading_deg": <float>?,
-        "is_end": <bool>?,
-    }
-
-    <response> = {
-        "score": <float>,
-        "minimal_distance_m": <integer>,
-        "meeting_ranges_ms": [<meeting-range>, ...]
-    }
-
-    <meeting-range> = [<integer>, <integer>]
-
-- `score` is the estimated probability of disease transmission.
-- `minimal_distance_m` is the smallest distance the two people got to each other.
-- `meeting_ranges_ms` represent time frames of possible contact between the two
-  people (pretty much the time frames at which a transmission could occur with
-  non-zero probability).
-
-## Examples
-
-Request:
-
-    {
-        "sick_geopoints": [
-            {
-                "timestamp_ms": "1521743776992",
-                "latitude_e7" : 371227520,
-                "longitude_e7" : -76565789,
-                "accuracy_m" : 5,
-                "velocity_mps" : 9,
-                "heading_deg" : 274
-            },
-            {
-                "timestamp_ms" : "1521743776993",
-                "latitude_e7" : 371227520,
-                "longitude_e7" : -76565789,
-                "accuracy_m" : 5,
-                "velocity_mps" : 9,
-                "heading_deg" : 274
-            }
-        ],
-        "query_geopoints": [
-            {
-                "timestamp_ms" : "1521743776992",
-                "latitude_e7" : 371227520,
-                "longitude_e7" : -76565789,
-                "accuracy_m" : 5,
-                "velocity_mps" : 9,
-                "heading_deg" : 274
-            },
-            {
-                "timestamp_ms" : "1521743776993",
-                "latitude_e7" : 371227520,
-                "longitude_e7" : -76565789,
-                "accuracy_m" : 5,
-                "velocity_mps" : 9,
-                "heading_deg" : 274
-            }
-        ]
-    }
-
-Response:
-
-    {
-        "score": 0.89,
-        "minimal_distance_m": 10,
-        "meeting_ranges_ms": [
-            [14800, 14900],
-            [30000, 35000],
-        ]
-    }
+For processing of a large number of users and their GPS sequences, we provide a C++ tool that is
+capable of evaluating hundreds of thousands of user GPS sequences, comparing them with GPS
+sequences of sick people and reporting all possibly infected users. For more details, please
+refer to our [batch processing docs](docs/batch_processing.md). If you would like to use it,
+please reach out to us using the contacts listed above and we will assist you with the integration
+of our tool into your setup.

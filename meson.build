@@ -19,7 +19,7 @@ sources = files(
   'src/geosick/geo_distance.cpp',
   'src/geosick/geo_search.cpp',
   'src/geosick/main_zostanzdravy.cpp',
-  'src/geosick/mysql_reader.cpp',
+  'src/geosick/mysql_db.cpp',
   'src/geosick/read_process.cpp',
   'src/geosick/sampler.cpp',
   'src/geosick/search_process.cpp',

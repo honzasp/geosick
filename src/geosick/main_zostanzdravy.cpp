@@ -3,7 +3,7 @@
 #include <nlohmann/json.hpp>
 #include "geosick/file_writer.hpp"
 #include "geosick/geo_search.hpp"
-#include "geosick/mysql_reader.hpp"
+#include "geosick/mysql_db.hpp"
 #include "geosick/read_process.hpp"
 #include "geosick/sampler.hpp"
 #include "geosick/search_process.hpp"
@@ -86,12 +86,13 @@ static void main(int argc, char** argv) {
         config_file >> config_doc;
     }
     Config cfg = config_from_json(config_doc);
-
     std::filesystem::path temp_dir = cfg.temp_dir;
-    std::unordered_set<uint32_t> sick_user_ids {5, 7};
+    MysqlDb mysql(cfg);
+
+    auto sick_user_ids = mysql.read_sick_user_ids();
     ReadProcess read_proc(sick_user_ids, temp_dir, 10); {
-        MysqlReader mysql(cfg);
-        read_proc.process(mysql);
+        auto row_reader = mysql.read_rows();
+        read_proc.process(*row_reader);
     }
 
     auto end_time = UtcTime(DurationS(read_proc.get_max_timestamp()));

@@ -1,12 +1,14 @@
-#include "geosick/mysql_reader.hpp"
+#include "geosick/mysql_db.hpp"
 
 namespace geosick {
 
-MysqlReader::MysqlReader(const Config& cfg)
-{
+MysqlDb::MysqlDb(const Config& cfg) {
     m_conn.connect(cfg.mysql.db.c_str(), cfg.mysql.host.c_str(),
         cfg.mysql.user.c_str(), cfg.mysql.password.c_str(),
         cfg.mysql.port);
+}
+
+std::unique_ptr<MysqlReader> MysqlDb::read_rows() {
     mysqlpp::Query query = m_conn.query(R"(
         SELECT client_id,
             UNIX_TIMESTAMP(created_at),
@@ -17,7 +19,25 @@ MysqlReader::MysqlReader(const Config& cfg)
             speed
         FROM clients_positions
     )");
-    m_result = query.use();
+    return std::make_unique<MysqlReader>(query.use());
+}
+
+std::unordered_set<uint32_t> MysqlDb::read_sick_user_ids() {
+    mysqlpp::Query query = m_conn.query(R"(
+        SELECT client_id, status
+        FROM clients_statuses
+    )");
+    auto result = query.use();
+
+    std::unordered_set<uint32_t> sick_user_ids;
+    while (auto row = result.fetch_row()) {
+        uint32_t user_id = row.at(0);
+        uint32_t status = row.at(1);
+        if (status == 1) {
+            sick_user_ids.insert(user_id);
+        }
+    }
+    return sick_user_ids;
 }
 
 std::optional<GeoRow> MysqlReader::read() {

@@ -1,5 +1,5 @@
 
-## Geosick HTTP server
+# Geosick HTTP server
 The Geosick HTTP server provides a simple [API](#api) with a sole purpose of analyzing
 two geopoint sequencies (one sequence from a healthy person and one from a
 person infected by the virus) and determine the probability that the healthy

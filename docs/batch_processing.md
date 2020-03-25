@@ -1,11 +1,11 @@
-## Batch processing
+# Batch processing
 
 Our batch processing tool is meant to be used for identifying users that have a high chance of
 being infected by already sick people whose GPS location history is known. The tool is written
 mostly in C++ and is supposed to be able to process databases of hundreds of thousands of users.
 Here follows the description of how it works internally.
 
-# Data load
+## Data load
 
 The first step is to load all of the data from the database. In the current setup it's written to load
 the data from MySQL database, but almost any other DB can be used (even the NoSQL ones like ScyllaDB).
@@ -16,7 +16,7 @@ To cope with large data volumes without the need for a large RAM, we stream the 
 files that are stored on a disk. Before each file is saved, we sort its content based on UserID
 and timestamp.
 
-# Sampling
+## Sampling
 
 To make further data processing easier, we first perform something we call sampling. It is a process
 during which we take GPS sequence from each user individually and sample it so that we get a new GPS
@@ -25,7 +25,7 @@ all users (or nothing if it's unavailable). To do that we need to separate GPS s
 and sort it based on a timestamp. To do that we form a buffered heap on top of the files we
 generated in the previous step.
 
-# Prefiltering
+## Prefiltering
 
 The final probability evaluation process is computationally quite heavy and hence we try avoiding
 computing it for all user-sick pairs. To do that we roughly prefilter the user-sick pairs. The
@@ -34,7 +34,7 @@ and then iterating over all of our users and asking whether there is an intersec
 GPS-time data with anyone from the infected group. The search structure is currently based
 on hashing of (GPS, time) tuple.
 
-# Final evaluation
+## Final evaluation
 
 The final step is to take all of the "promising" pairs from the previous step and run it through
 our [HTTP service](http_server.md). User pairs that show significantly high probability of

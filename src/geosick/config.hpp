@@ -15,6 +15,7 @@ struct Config {
     uint32_t range_days;
     uint32_t period_s;
     std::string temp_dir;
+    uint32_t row_buffer_size;
 };
 
 }

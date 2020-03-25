@@ -20,6 +20,7 @@ static Config config_from_json(const nlohmann::json& doc) {
     cfg.range_days = doc["range_days"].get<uint32_t>();
     cfg.period_s = doc["period_s"].get<uint32_t>();
     cfg.temp_dir = doc["temp_dir"].get<std::string>();
+    cfg.row_buffer_size = doc["row_buffer_size"].get<uint32_t>();
     return cfg;
 }
 
@@ -90,7 +91,7 @@ static void main(int argc, char** argv) {
     MysqlDb mysql(cfg);
 
     auto sick_user_ids = mysql.read_sick_user_ids();
-    ReadProcess read_proc(sick_user_ids, temp_dir, 10); {
+    ReadProcess read_proc(sick_user_ids, temp_dir, cfg.row_buffer_size); {
         auto row_reader = mysql.read_rows();
         read_proc.process(*row_reader);
     }

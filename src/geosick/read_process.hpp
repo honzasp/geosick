@@ -13,12 +13,16 @@ class ReadProcess {
 
     std::vector<GeoRow> m_row_buffer;
     std::vector<GeoRow> m_sick_rows;
-    std::vector<std::filesystem::path> m_temp_files;
+    std::vector<std::vector<std::filesystem::path>> m_temp_files;
     uint32_t m_temp_file_counter = 0;
     uint32_t m_min_timestamp = UINT32_MAX;
     uint32_t m_max_timestamp = 0;
 
     void flush_buffer();
+    void add_temp_file(std::filesystem::path path, size_t level);
+    std::filesystem::path merge_temp_files(
+        const std::vector<std::filesystem::path>& files);
+    std::filesystem::path gen_temp_file();
 public:
     ReadProcess(std::unordered_set<uint32_t> sick_user_ids,
         std::filesystem::path temp_dir,

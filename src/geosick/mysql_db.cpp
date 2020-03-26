@@ -22,22 +22,24 @@ std::unique_ptr<MysqlReader> MysqlDb::read_rows() {
     return std::make_unique<MysqlReader>(query.use());
 }
 
-std::unordered_set<uint32_t> MysqlDb::read_sick_user_ids() {
+MysqlDb::UserIds MysqlDb::read_user_ids() {
     mysqlpp::Query query = m_conn.query(R"(
         SELECT client_id, status
         FROM clients_statuses
     )");
     auto result = query.use();
 
-    std::unordered_set<uint32_t> sick_user_ids;
+    MysqlDb::UserIds user_ids;
     while (auto row = result.fetch_row()) {
         uint32_t user_id = row.at(0);
         uint32_t status = row.at(1);
         if (status == 1) {
-            sick_user_ids.insert(user_id);
+            user_ids.sick.insert(user_id);
+        } else if (status == 0) {
+            user_ids.query.insert(user_id);
         }
     }
-    return sick_user_ids;
+    return user_ids;
 }
 
 std::optional<GeoRow> MysqlReader::read() {

@@ -13,7 +13,12 @@ class MysqlDb {
 public:
   explicit MysqlDb(const Config& cfg);
   std::unique_ptr<MysqlReader> read_rows();
-  std::unordered_set<uint32_t> read_sick_user_ids();
+
+  struct UserIds {
+      std::unordered_set<uint32_t> sick;
+      std::unordered_set<uint32_t> query;
+  };
+  UserIds read_user_ids();
 };
 
 class MysqlReader final: public GeoRowReader {

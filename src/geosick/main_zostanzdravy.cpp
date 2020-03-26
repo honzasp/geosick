@@ -90,8 +90,8 @@ static void main(int argc, char** argv) {
     std::filesystem::path temp_dir = cfg.temp_dir;
     MysqlDb mysql(cfg);
 
-    auto sick_user_ids = mysql.read_sick_user_ids();
-    ReadProcess read_proc(sick_user_ids, temp_dir, cfg.row_buffer_size); {
+    auto user_ids = mysql.read_user_ids();
+    ReadProcess read_proc(user_ids.sick, temp_dir, cfg.row_buffer_size); {
         auto row_reader = mysql.read_rows();
         read_proc.process(*row_reader);
     }
@@ -105,7 +105,7 @@ static void main(int argc, char** argv) {
     GeoSearch search(sick_samples);
 
     FileWriter all_writer(temp_dir / "all_rows.bin");
-    SearchProcess search_proc(&sampler, &search, &all_writer, &sick_user_ids);
+    SearchProcess search_proc(&sampler, &search, &all_writer, &user_ids.query);
     auto proc_reader = read_proc.read_all_rows();
     while (auto row = proc_reader->read()) {
         search_proc.process_row(*row);

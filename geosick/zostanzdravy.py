@@ -3,6 +3,7 @@ Usage: geosick.zostanzdravy <config-file>
 """
 import docopt
 import json
+import os
 import os.path
 import subprocess
 
@@ -16,6 +17,8 @@ if __name__ == "__main__":
     config_path = args["<config-file>"]
     with open(config_path, "rt") as f:
         cfg = json.load(f)
+
+    os.makedirs(cfg["temp_dir"], exist_ok=True)
 
     requests_path = os.path.join(cfg["temp_dir"], "requests.json")
     proc = subprocess.run([EXECUTABLE, config_path, requests_path])

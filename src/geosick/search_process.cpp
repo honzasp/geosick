@@ -10,16 +10,17 @@ using HitHash = SearchProcess::HitHash;
 
 SearchProcess::SearchProcess(const Sampler* sampler,
     const GeoSearch* search, FileWriter* writer,
-    const std::unordered_set<uint32_t>* sick_user_ids):
-    m_sampler(sampler), m_search(search),
-    m_writer(writer), m_sick_user_ids(sick_user_ids) {}
+    const std::unordered_set<uint32_t>* query_user_ids)
+:   m_sampler(sampler), m_search(search),
+    m_writer(writer), m_query_user_ids(query_user_ids)
+{}
 
 
 void SearchProcess::flush_user_rows() {
     m_user_offsets.emplace_back(m_current_user_id, m_writer->get_offset());
     m_writer->write(make_view(m_current_rows));
 
-    if (!m_sick_user_ids->count(m_current_user_id)) {
+    if (m_query_user_ids->count(m_current_user_id)) {
         m_sampler->sample(make_view(m_current_rows), m_current_samples);
         for (const auto& sample: m_current_samples) {
             auto sick_ids = m_search->find_users_within_circle(

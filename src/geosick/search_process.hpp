@@ -42,7 +42,7 @@ private:
     const Sampler* m_sampler;
     const GeoSearch* m_search;
     FileWriter* m_writer;
-    const std::unordered_set<uint32_t>* m_sick_user_ids;
+    const std::unordered_set<uint32_t>* m_query_user_ids;
 
     uint32_t m_current_user_id = 0;
     std::vector<GeoRow> m_current_rows;
@@ -55,7 +55,7 @@ private:
 public:
     SearchProcess(const Sampler* sampler,
         const GeoSearch* search, FileWriter* writer, 
-        const std::unordered_set<uint32_t>* sick_user_ids);
+        const std::unordered_set<uint32_t>* query_user_ids);
     void process_row(const GeoRow& row);
     void process_end();
 

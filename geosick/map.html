@@ -222,11 +222,13 @@ function setResponse(requestJson, responseJson) {
     for (var sample of samples) {
       if (sample) {
         var lat_lng = [sample.latitude_e7*1e-7, sample.longitude_e7*1e-7];
+          /*
         L.circle(lat_lng, {
           fill: true, stroke: false,
           color: color, fillOpacity: 0.4,
           radius: sample.accuracy_m,
         }).addTo(mapLayer);
+          */
         latlngs.push([sample.latitude_e7*1e-7, sample.longitude_e7*1e-7]);
       } else {
         addPolyline(latlngs, color);

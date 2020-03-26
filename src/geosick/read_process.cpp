@@ -17,11 +17,13 @@ namespace {
 }
 
 
-ReadProcess::ReadProcess(std::unordered_set<uint32_t> sick_user_ids,
+ReadProcess::ReadProcess(const std::unordered_set<uint32_t>* sick_user_ids,
+    const std::unordered_set<uint32_t>* query_user_ids,
     std::filesystem::path temp_dir,
     size_t row_buffer_size
 ):
-    m_sick_user_ids(std::move(sick_user_ids)),
+    m_sick_user_ids(sick_user_ids),
+    m_query_user_ids(query_user_ids),
     m_temp_dir(std::move(temp_dir)),
     m_row_buffer_size(row_buffer_size)
 {}
@@ -78,26 +80,28 @@ std::filesystem::path ReadProcess::gen_temp_file() {
 void ReadProcess::process(GeoRowReader& reader) {
     m_row_buffer.reserve(m_row_buffer_size);
     while (auto row = reader.read()) {
-        if (m_sick_user_ids.count(row->user_id)) {
-            m_sick_rows.push_back(*row);
-        }
-
         m_min_timestamp = std::min(m_min_timestamp, row->timestamp_utc_s);
         m_max_timestamp = std::max(m_max_timestamp, row->timestamp_utc_s);
 
-        m_row_buffer.push_back(*row);
-        if (m_row_buffer.size() >= m_row_buffer_size) {
-            this->flush_buffer();
+        if (m_sick_user_ids->count(row->user_id)) {
+            m_sick_rows.push_back(*row);
+        } else if (m_query_user_ids->count(row->user_id)) {
+            m_row_buffer.push_back(*row);
+            if (m_row_buffer.size() >= m_row_buffer_size) {
+                this->flush_buffer();
+            }
         }
     }
+
     if (m_row_buffer.size() > 0) {
         this->flush_buffer();
     }
+    m_row_buffer.shrink_to_fit();
 
     std::sort(m_sick_rows.begin(), m_sick_rows.end(), CompareRows());
 }
 
-std::unique_ptr<GeoRowReader> ReadProcess::read_all_rows() {
+std::unique_ptr<GeoRowReader> ReadProcess::read_query_rows() {
     auto merger = std::make_unique<MergeReader<CompareRows>>(CompareRows());
     for (auto& paths: m_temp_files) {
         for (const auto& path: paths) {

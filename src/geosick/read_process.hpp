@@ -7,7 +7,8 @@
 namespace geosick {
 
 class ReadProcess {
-    std::unordered_set<uint32_t> m_sick_user_ids;
+    const std::unordered_set<uint32_t>* m_sick_user_ids;
+    const std::unordered_set<uint32_t>* m_query_user_ids;
     std::filesystem::path m_temp_dir;
     size_t m_row_buffer_size;
 
@@ -24,12 +25,13 @@ class ReadProcess {
         const std::vector<std::filesystem::path>& files);
     std::filesystem::path gen_temp_file();
 public:
-    ReadProcess(std::unordered_set<uint32_t> sick_user_ids,
+    ReadProcess(const std::unordered_set<uint32_t>* sick_user_ids,
+        const std::unordered_set<uint32_t>* query_user_ids,
         std::filesystem::path temp_dir,
         size_t row_buffer_size);
     void process(GeoRowReader& reader);
 
-    std::unique_ptr<GeoRowReader> read_all_rows();
+    std::unique_ptr<GeoRowReader> read_query_rows();
     std::vector<GeoRow> read_sick_rows();
 
     uint32_t get_min_timestamp() const { return m_min_timestamp; }

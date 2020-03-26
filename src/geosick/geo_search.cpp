@@ -38,22 +38,19 @@ GeoSearch::GeoSearch(const std::vector<GeoSample>& samples)
     }
 }
 
-std::vector<GeoSample::UserID>
-GeoSearch::find_users_within_circle(int32_t lat, int32_t lon, unsigned radius, TimeIdx time_index) const
+void GeoSearch::find_users_within_circle(int32_t lat, int32_t lon,
+    unsigned radius, TimeIdx time_index,
+    std::unordered_set<uint32_t>& out_user_ids) const
 {
     SectorKey key{time_index, get_lat_key(lat), get_lon_key(lon)};
     auto it = m_sectors.find(key);
-    if (it == m_sectors.end()) {
-        return {};
-    }
+    if (it == m_sectors.end()) { return; }
 
-    std::vector<GeoSample::UserID> users;
     for (const auto& p: it->second) {
         if (circles_intersect_fast(lat, lon, radius, p.lat, p.lon, p.accuracy_m)) {
-            users.push_back(p.user_id);
+            out_user_ids.insert(p.user_id);
         }
     }
-    return users;
 }
 
 void

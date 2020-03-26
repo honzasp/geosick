@@ -13,6 +13,7 @@ struct GeoSample {
     int32_t lat;
     int32_t lon;
     uint16_t accuracy_m;
+    // TODO: velocity_n, velocity_e
 };
 
 using DurationS = std::chrono::duration<int32_t, std::ratio<1>>;

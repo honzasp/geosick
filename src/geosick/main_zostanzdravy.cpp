@@ -24,6 +24,36 @@ static Config config_from_json(const nlohmann::json& doc) {
     return cfg;
 }
 
+static SickMap read_sick_map(const Sampler& sampler, std::vector<GeoRow> sick_rows) {
+    SickMap map;
+    map.rows = std::move(sick_rows);
+
+    size_t user_idx = 0;
+    size_t user_begin = 0;
+    while (user_begin < map.rows.size()) {
+        uint32_t user_id = map.rows.at(user_begin).user_id;
+        size_t user_end = user_begin + 1;
+        while (user_end < map.rows.size() && map.rows.at(user_end).user_id == user_id) {
+            ++user_end;
+        }
+
+        map.user_id_to_idx.emplace(user_id, user_idx);
+        map.row_offsets.push_back(user_begin);
+        map.sample_offsets.push_back(map.samples.size());
+        ArrayView<const GeoRow> rows_view {
+            map.rows.data() + user_begin, map.rows.data() + user_end};
+        sampler.sample(rows_view, map.samples);
+
+        user_idx += 1;
+        user_begin = user_end;
+    }
+
+    map.row_offsets.push_back(user_begin);
+    map.sample_offsets.push_back(map.samples.size());
+    return map;
+}
+
+#if 0
 static nlohmann::json row_to_json(const GeoRow& row) {
     nlohmann::json doc = {
         {"timestamp_ms", int64_t(row.timestamp_utc_s) * 1000},
@@ -41,25 +71,6 @@ static nlohmann::json row_to_json(const GeoRow& row) {
     return doc;
 }
 
-static std::vector<GeoSample> rows_to_samples(
-    const Sampler& sampler, const std::vector<GeoRow>& rows)
-{
-    std::vector<GeoSample> samples;
-    size_t user_begin = 0;
-    while (user_begin < rows.size()) {
-        uint32_t user_id = rows.at(user_begin).user_id;
-        size_t user_end = user_begin + 1;
-        while (user_end < rows.size() && rows.at(user_end).user_id == user_id) {
-            ++user_end;
-        }
-
-        auto user_view = make_view(rows.data() + user_begin, rows.data() + user_end);
-        sampler.sample(user_view, samples);
-        user_begin = user_end;
-    }
-    return samples;
-}
-
 static nlohmann::json request_to_json(
     const std::vector<GeoRow>& sick_rows,
     const std::vector<GeoRow>& query_rows)
@@ -75,10 +86,11 @@ static nlohmann::json request_to_json(
     }
     return doc;
 }
+#endif
 
 static void main(int argc, char** argv) {
-    if (argc != 3) {
-        std::cerr << "Usage: " << argv[0] << " <config-file> <output-file>" << std::endl;
+    if (argc != 2) {
+        std::cerr << "Usage: " << argv[0] << " <config-file>" << std::endl;
         throw std::runtime_error("Bad usage");
     }
 
@@ -91,7 +103,8 @@ static void main(int argc, char** argv) {
     MysqlDb mysql(cfg);
 
     auto user_ids = mysql.read_user_ids();
-    ReadProcess read_proc(user_ids.sick, temp_dir, cfg.row_buffer_size); {
+    ReadProcess read_proc(&user_ids.sick, &user_ids.query, temp_dir, cfg.row_buffer_size);
+    {
         auto row_reader = mysql.read_rows();
         read_proc.process(*row_reader);
     }
@@ -101,26 +114,16 @@ static void main(int argc, char** argv) {
     auto period = DurationS(cfg.period_s);
     Sampler sampler(begin_time, end_time, period);
 
-    auto sick_samples = rows_to_samples(sampler, read_proc.read_sick_rows());
-    GeoSearch search(sick_samples);
+    auto sick_map = read_sick_map(sampler, read_proc.read_sick_rows());
+    GeoSearch search(sick_map.samples);
 
-    FileWriter all_writer(temp_dir / "all_rows.bin");
-    SearchProcess search_proc(&sampler, &search, &all_writer, &user_ids.query);
-    auto proc_reader = read_proc.read_all_rows();
-    while (auto row = proc_reader->read()) {
-        search_proc.process_row(*row);
+    NotifyProcess notify_proc {};
+    SearchProcess search_proc(&cfg, &sampler, &search, &sick_map, &notify_proc);
+    auto reader = read_proc.read_query_rows();
+    while (auto row = reader->read()) {
+        search_proc.process_query_row(*row);
     }
     search_proc.process_end();
-
-    auto hits = search_proc.read_hits(); {
-        std::ofstream output_file(argv[2]);
-        for (auto hit: hits) {
-            auto query_rows = search_proc.read_user_rows(hit.query_user_id);
-            auto sick_rows = search_proc.read_user_rows(hit.sick_user_id);
-            output_file << request_to_json(sick_rows, query_rows) << std::endl;
-        }
-    };
-    all_writer.close();
 }
 
 }

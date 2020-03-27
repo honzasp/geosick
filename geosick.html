@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>Geosick map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ==" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js" integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew==" crossorigin=""></script>
+
+<style>
+body {
+  margin: 0;
+  padding: 0;
+}
+
+#container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  margin: 0;
+}
+
+#top {
+  flex: auto;
+  display: flex;
+  flex-direction: row;
+}
+
+#sidebar {
+  width: 350px;
+  padding: 4px;
+}
+
+#sidebar .sidebar-box {
+  margin-bottom: 10px;
+}
+
+#select-buttons {
+  display: flex;
+  height: 40px;
+}
+#select-buttons button {
+  flex: 2;
+  margin: 2px;
+}
+#select-buttons #select-num {
+  flex: 1;
+  margin: 2px;
+  width: 60px;
+  text-align: center;
+}
+
+
+#map {
+  flex: auto;
+  height: 100%;
+}
+
+#bottom {
+  height: 40px;
+  display: flex;
+}
+
+#anim-buttons {
+  flex: none;
+  display: flex;
+}
+#anim-buttons button {
+  flex: 1;
+  min-width: 60px;
+  margin: 2px;
+}
+
+#slider {
+  display: block;
+  flex: auto;
+  margin: 0 8px;
+}
+
+.sick-color { color: #f7522d; }
+.query-color { color: #4287f5; }
+</style>
+</head>
+
+<body>
+  <div id="container">
+    <div id="top">
+      <div id="sidebar">
+        <div class="sidebar-box">
+          <h1>Geosick</h1>
+        </div>
+
+        <div class="sidebar-box">
+          <label><b>Soubor:</b> <input id="file" type="file"></label>
+        </div>
+
+        <div class="sidebar-box">
+          <label for="select-num"><b>Nález:</b></label>
+          <div id="select-buttons">
+            <button id="select-prev" title="Předchozí nález">&#x2190;</button>
+            <input id="select-num" type="number" min="1" max="1" step="1" required>
+            <button id="select-next" title="Následující nález">&#x2192;</button>
+          </div>
+        </div>
+
+        <div class="sidebar-box">
+          <i id="status"></i>
+        </div>
+
+        <div class="sidebar-box">
+          ID uživatele: <span id="query-id"></span><br>
+          ID nakaženého: <span id="sick-id"></span><br>
+          Celkové skóre: <strong id="score"></strong><br>
+          Vzdálenost: <span id="min-distance"></span><br>
+        </div>
+
+        <div class="sidebar-box">
+          Čas: <span id="timestamp"></span><br>
+          Riziko: <span id="risk"></span><br>
+          Vzdálenost: <span id="distance"></span><br>
+          <span class="query-color">Uživatel: <span id="query-pos"></span></span><br>
+          <span class="sick-color">Nakažený: <span id="sick-pos"></span></span><br>
+        </div>
+      </div>
+
+      <div id="map"></div>
+    </div>
+
+    <div id="bottom">
+      <div id="anim-buttons">
+        <button id="play" title="Spustit animaci">&#x25b6;</button>
+        <button id="pause" title="Pozastavit animaci">&#x23f8;</button>
+        <button id="step-prev" title="Krok zpět">&#x23ea;</button>
+        <button id="step-next" title="Krok vpřed">&#x23e9;</button>
+      </div>
+      <input id="slider" type="range" min="0" max="0" step="1">
+    </div>
+  </div>
+
+<script>
+;(function(){
+
+/// initialization
+
+var map = L.map('map').setView([49.8888882, 15.4749003], 7);
+L.tileLayer("https://mapserver.mapy.cz/base-m/{z}-{x}-{y}", {
+  attribution: "(c) Mapy.cz",
+  maxZoom: 19,
+}).addTo(map);
+
+var fileElem = document.getElementById("file");
+var sliderElem = document.getElementById("slider");
+var statusElem = document.getElementById("status");
+var inputElems = {
+  selectPrev: document.getElementById("select-prev"),
+  selectNum: document.getElementById("select-num"),
+  selectNext: document.getElementById("select-next"),
+  play: document.getElementById("play"),
+  pause: document.getElementById("pause"),
+  stepPrev: document.getElementById("step-prev"),
+  stepNext: document.getElementById("step-next"),
+};
+var sidebarElems = {
+  queryId: document.getElementById("query-id"),
+  sickId: document.getElementById("sick-id"),
+  score: document.getElementById("score"),
+  minDistance: document.getElementById("min-distance"),
+  timestamp: document.getElementById("timestamp"),
+  risk: document.getElementById("risk"),
+  distance: document.getElementById("distance"),
+  queryPos: document.getElementById("query-pos"),
+  sickPos: document.getElementById("sick-pos"),
+};
+
+/// reading the matches from file
+
+var matches = [];
+
+function handleFile() {
+  if (fileElem.files.length == 0) {
+    setResponse(null);
+    return;
+  }
+
+  var file = fileElem.files[0];
+  var fileReader = new FileReader();
+  fileReader.onload = function() {
+    matches = [];
+    for (var line of fileReader.result.split("\n")) {
+      try {
+        if (line !== "") {
+          matches.push(JSON.parse(line));
+        }
+      } catch (e) {
+        if (e instanceof SyntaxError) {
+          reportError(e.message);
+          return;
+        } else {
+          throw e;
+        }
+      }
+    }
+    setStatus("OK");
+    setMatchIdx(0);
+  };
+  fileReader.onerror = function() {
+    reportError("Error reading file: " + fileReader.error.message);
+  };
+  fileReader.readAsText(file);
+  setStatus("Načítám soubor...");
+}
+fileElem.addEventListener("change", handleFile, false);
+
+
+/// switching between matches
+
+var selectedMatchIdx = 0;
+var selectedMatch = null;
+
+function setMatchIdx(idx) {
+  if (idx >= matches.length) {
+    idx = matches.length > 0 ? matches.length - 1 : 0;
+  } else if (idx < 0) {
+    idx = 0;
+  }
+
+  selectedMatchIdx = idx;
+  if (idx < matches.length) {
+    inputElems.selectNum.value = "" + (idx + 1);
+    inputElems.selectNum.disabled = false;
+    setMatch(matches[idx])
+  } else {
+    inputElems.selectNum.value = "";
+    inputElems.selectNum.disabled = true;
+    setMatch(null);
+  }
+}
+
+inputElems.selectPrev.addEventListener("click", function() {
+  setMatchIdx(selectedMatchIdx - 1);
+}, false);
+inputElems.selectNext.addEventListener("click", function() {
+  setMatchIdx(selectedMatchIdx + 1);
+}, false);
+inputElems.selectNum.addEventListener("change", function() {
+  setMatchIdx(inputElems.selectNum.value - 1);
+}, false);
+
+
+/// displaying the match on the map
+
+var SICK_COLOR = "#f7522d";
+var QUERY_COLOR = "#4287f5";
+
+var mapLayer = null;
+var sickCircle = null;
+var queryCircle = null;
+
+var timeIndexFirst = null;
+var timeIndexLast = null;
+var selectedTimeIndex = 0;
+
+function setMatch(match) {
+  selectedMatch = match;
+
+  if (mapLayer !== null) {
+    mapLayer.removeFrom(map);
+    mapLayer = null;
+  }
+  mapLayer = L.featureGroup().addTo(map);
+  setSidebarMatch(match);
+
+  if (match !== null && match.query_samples.length == 0 
+    && match.sick_samples.length == 0 && match.steps.length == 0)
+  {
+    match = null;
+  }
+
+  function addSamples(samples) {
+    if (samples.length > 0) {
+      timeIndexFirst = Math.min(timeIndexFirst, samples[0].time_index)
+      timeIndexLast = Math.max(timeIndexLast, samples[samples.length-1].time_index)
+    }
+  }
+
+  function addRows(rows, color) {
+    var latlngs = [];
+    for (var row of rows) {
+      var latlng = [row.lat_e7*1e-7, row.lon_e7*1e-7];
+      latlngs.push(latlng);
+        /*
+      L.circle(latlng, {
+        fill: true, stroke: false,
+        color: color, fillOpacity: 0.4,
+        radius: sample.accuracy_m,
+      }).addTo(mapLayer);
+        */
+    }
+
+    if (latlngs.length > 0) {
+      mapLayer.addLayer(L.polyline(latlngs, {color: color, opacity: 0.4}));
+    }
+  }
+
+  if (match !== null) {
+    timeIndexFirst = Infinity;
+    timeIndexLast = -Infinity;
+
+    addSamples(match.query_samples);
+    addSamples(match.sick_samples);
+    addRows(match.query_rows, QUERY_COLOR);
+    addRows(match.sick_rows, SICK_COLOR);
+    sliderElem.min = timeIndexFirst;
+    sliderElem.max = timeIndexLast;
+  } else {
+    timeIndexFirst = 0;
+    timeIndexLast = 0;
+  }
+
+  setTimeIndex(match, timeIndexFirst);
+
+  if (match !== null) {
+    map.fitBounds(mapLayer.getBounds());
+  }
+}
+
+function setTimeIndex(match, timeIndex) {
+  if (timeIndex < timeIndexFirst) {
+    timeIndex = timeIndexFirst;
+  } else if (timeIndex > timeIndexLast) {
+    timeIndex = timeIndexLast;
+  }
+  selectedTimeIndex = timeIndex;
+
+  if (sickCircle) { sickCircle.remove(); }
+  if (queryCircle) { queryCircle.remove(); }
+
+  function binarySearch(elems) {
+    var begin = 0;
+    var end = elems.length;
+    while (begin < end) {
+      var mid = begin + Math.floor((end - begin)/2);
+      if (elems[mid].time_index < timeIndex) {
+        begin = mid + 1;
+      } else if (elems[mid].time_index > timeIndex) {
+        end = mid;
+      } else {
+        return elems[mid];
+      }
+    }
+    return null;
+  }
+
+  function addCircle(sample, color) {
+    return L.circle([sample.lat_e7*1e-7, sample.lon_e7*1e-7], {
+      color: color, fill: true, stroke: false, fillOpacity: 0.8
+    }).setRadius(sample.accuracy_m).addTo(mapLayer);
+  }
+
+  var querySample = null;
+  var sickSample = null;
+  var step = null;
+
+  if (match !== null) {
+    querySample = binarySearch(match.query_samples);
+    sickSample = binarySearch(match.sick_samples);
+    step = binarySearch(match.steps);
+  }
+
+  var timestamp = null;
+  if (querySample !== null) {
+    queryCircle = addCircle(querySample, QUERY_COLOR);
+    timestamp = querySample.timestamp_utc_s;
+  }
+  if (sickSample !== null) {
+    sickCircle = addCircle(sickSample, SICK_COLOR);
+    timestamp = sickSample.timestamp_utc_s;
+  }
+  if (step !== null) {
+    timestamp = step.timestamp_utc_s;
+  }
+
+  setSidebarStep(timestamp, querySample, sickSample, step);
+
+  if (sliderElem.valueAsNumber != timeIndex) {
+    sliderElem.valueAsNumber = timeIndex;
+  }
+}
+
+sliderElem.addEventListener("input", function() {
+  setTimeIndex(selectedMatch, sliderElem.valueAsNumber);
+}, false);
+inputElems.stepPrev.addEventListener("click", function() {
+  setTimeIndex(selectedMatch, selectedTimeIndex - 1);
+}, false);
+inputElems.stepNext.addEventListener("click", function() {
+  setTimeIndex(selectedMatch, selectedTimeIndex + 1);
+}, false);
+
+
+/// animating the steps
+
+var animationTimer = null;
+
+function animationStep() {
+  if (selectedMatch !== null) {
+    var timeIndex = selectedTimeIndex + 1;
+    if (timeIndex > timeIndexLast) {
+      timeIndex = timeIndexFirst;
+    }
+    setTimeIndex(selectedMatch, timeIndex);
+  } else {
+    stopAnimation();
+  }
+}
+
+function startAnimation() {
+  stopAnimation();
+  animationTimer = setInterval(animationStep, 300);
+}
+
+function stopAnimation() {
+  if (animationTimer) {
+    clearInterval(animationTimer);
+  }
+  animationTimer = null;
+}
+
+inputElems.play.addEventListener("click", startAnimation, false);
+inputElems.pause.addEventListener("click", stopAnimation, false);
+
+
+/// sidebar
+
+function setSidebarMatch(match) {
+  sidebarElems.queryId.innerText = match ? match.query_user_id : "n/a";
+  sidebarElems.sickId.innerText = match ? match.sick_user_id : "n/a";
+  sidebarElems.score.innerText = match ? match.score.toFixed(3) : "n/a";
+  sidebarElems.minDistance.innerText = match
+    ? match.min_distance_m.toFixed(1) + " m" : "n/a";
+}
+
+function setSidebarStep(timestamp, querySample, sickSample, step) {
+  sidebarElems.timestamp.innerText = timestamp
+    ? new Date(timestamp*1000).toLocaleString("cs-CZ",
+      {hour12: false, dateStyle: "medium", timeStyle: "long"})
+    : "n/a";
+  sidebarElems.risk.innerText = step
+    ? step.infect_rate.toFixed(3) : "n/a";
+  sidebarElems.distance.innerText = step
+    ? step.distance.toFixed(1) + " m" : "n/a";
+  sidebarElems.queryPos.innerText = querySample
+    ? formatLatLngAccuracy(querySample.lat_e7, querySample.lon_e7,
+      querySample.accuracy_m) : "n/a";
+  sidebarElems.sickPos.innerText = sickSample
+    ? formatLatLngAccuracy(sickSample.lat_e7, sickSample.lon_e7,
+      sickSample.accuracy_m) : "n/a";
+}
+
+function formatLatLngAccuracy(latE7, lonE7, accurM) {
+  var latDir = latE7 > 0 ? "N" : "S";
+  var latNumber = (Math.abs(latE7)*1e-7).toFixed(7);
+  var lonDir = lonE7 > 0 ? "E" : "W";
+  var lonNumber = (Math.abs(lonE7)*1e-7).toFixed(7);
+  var accurNumber = accurM.toFixed(1);
+  return latNumber+latDir + ", " + lonNumber+lonDir + " +/- " + accurNumber + " m";
+}
+
+function setStatus(msg) {
+  statusElem.innerText = msg;
+}
+
+function reportError(msg) {
+  alert(msg);
+}
+
+setMatchIdx(0);
+setStatus("Vyberte prosím soubor");
+})();
+</script>
+
+</body>
+
+</html>

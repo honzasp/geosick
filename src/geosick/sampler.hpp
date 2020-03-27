@@ -35,7 +35,7 @@ private:
 public:
     explicit Sampler(UtcTime begin_time, UtcTime end_time, DurationS period_s);
 
-    uint32_t get_max_time_index() const;
+    UtcTime time_index_to_timestamp(uint32_t time_index) const;
 
     void
     sample(ArrayView<const GeoRow> rows, std::vector<GeoSample>& out_samples) const;

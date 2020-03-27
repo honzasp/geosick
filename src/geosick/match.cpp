@@ -39,15 +39,15 @@ static double eval_infect_rate(
     return INFECT_RATE * (infect_area*isect_area) / (sick_area*query_area);
 }
 
-void Match::evaluate(const Config& cfg) {
+MatchOutput evaluate_match(const Config& cfg, const MatchInput& input) {
     double compl_score_log = 0.0;
     double min_distance = std::numeric_limits<double>::infinity();
 
     size_t query_i = 0;
     size_t sick_i = 0;
-    while (query_i < this->query_samples.size() && sick_i < this->sick_samples.size()) {
-        const auto& query_sample = this->query_samples.at(query_i);
-        const auto& sick_sample = this->sick_samples.at(sick_i);
+    while (query_i < input.query_samples.size() && sick_i < input.sick_samples.size()) {
+        const auto& query_sample = input.query_samples.at(query_i);
+        const auto& sick_sample = input.sick_samples.at(sick_i);
         if (query_sample.time_index < sick_sample.time_index) {
             ++query_i; continue;
         } else if (query_sample.time_index > sick_sample.time_index) {
@@ -56,17 +56,23 @@ void Match::evaluate(const Config& cfg) {
             ++query_i; ++sick_i;
         }
 
-        double distance = std::sqrt(pow2_geo_distance_fast_m(
+        MatchStep step;
+        step.distance_m = std::sqrt(pow2_geo_distance_fast_m(
             query_sample.lat, query_sample.lon,
             sick_sample.lat, sick_sample.lon));
-        double rate = eval_infect_rate(query_sample, sick_sample, distance);
-        compl_score_log += std::log1p(-std::min(0.9, double(cfg.period_s)*rate));
-        min_distance = std::min(min_distance, distance +
+        step.infect_rate = eval_infect_rate(query_sample, sick_sample, step.distance_m);
+        if (step.infect_rate > 0.0) {
+            compl_score_log += std::log1p(
+                -std::min(0.9, double(cfg.period_s)*step.infect_rate));
+        }
+        min_distance = std::min(min_distance, step.distance_m +
             0.5*double(query_sample.accuracy_m) + 0.5*double(sick_sample.accuracy_m));
     }
 
-    this->score = 0.0 - std::expm1(compl_score_log);
-    this->min_distance_m = min_distance;
+    MatchOutput output;
+    output.score = 0.0 - std::expm1(compl_score_log);
+    output.min_distance_m = min_distance;
+    return output;
 }
 
 }

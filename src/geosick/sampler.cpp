@@ -37,6 +37,10 @@ Sampler::Sampler(UtcTime begin_time, UtcTime end_time, DurationS period)
     assert(m_begin_time <= m_end_time);
 }
 
+UtcTime Sampler::time_index_to_timestamp(uint32_t time_index) const {
+    return m_begin_time + m_period * time_index;
+}
+
 void
 Sampler::sample(ArrayView<const GeoRow> rows, std::vector<GeoSample>& out_samples) const
 {
@@ -106,12 +110,6 @@ Sampler::get_weighted_sample(const GeoRow& row, const GeoRow& next_row,
         .lon = int32_t(w1*row.lon + w2*next_row.lon),
         .accuracy_m = uint16_t(w1*row.accuracy_m + w2*next_row.accuracy_m)
     };
-}
-
-uint32_t
-Sampler::get_max_time_index() const
-{
-    return m_end_offset / m_period;
 }
 
 }

@@ -25,17 +25,18 @@ void SearchProcess::flush_user_rows() {
     }
 
     for (uint32_t sick_id: sick_ids) {
-        Match match;
-        match.query_user_id = m_current_user_id;
-        match.query_rows = make_view(m_current_rows);
-        match.query_samples = make_view(m_current_samples);
+        MatchInput mi;
+        mi.query_user_id = m_current_user_id;
+        mi.query_rows = make_view(m_current_rows);
+        mi.query_samples = make_view(m_current_samples);
 
-        match.sick_user_id = sick_id;
+        mi.sick_user_id = sick_id;
         size_t sick_idx = m_sick_map->user_id_to_idx.at(sick_id);
-        match.sick_rows = m_sick_map->rows_by_idx(sick_idx);
-        match.sick_samples = m_sick_map->samples_by_idx(sick_idx);
-        match.evaluate(*m_cfg);
-        m_notify_proc->notify(match);
+        mi.sick_rows = m_sick_map->rows_by_idx(sick_idx);
+        mi.sick_samples = m_sick_map->samples_by_idx(sick_idx);
+        
+        MatchOutput mo = evaluate_match(*m_cfg, mi);
+        m_notify_proc->notify(mi, mo);
     }
 
     m_current_samples.clear();
@@ -51,7 +52,7 @@ void SearchProcess::process_query_row(const GeoRow& row) {
     m_current_rows.push_back(row);
 }
 
-void SearchProcess::process_end() {
+void SearchProcess::close() {
     this->flush_user_rows();
 }
 

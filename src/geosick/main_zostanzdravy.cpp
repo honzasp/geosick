@@ -117,13 +117,14 @@ static void main(int argc, char** argv) {
     auto sick_map = read_sick_map(sampler, read_proc.read_sick_rows());
     GeoSearch search(sick_map.samples);
 
-    NotifyProcess notify_proc {};
+    NotifyProcess notify_proc(&sampler, temp_dir / "matches.json");
     SearchProcess search_proc(&cfg, &sampler, &search, &sick_map, &notify_proc);
     auto reader = read_proc.read_query_rows();
     while (auto row = reader->read()) {
         search_proc.process_query_row(*row);
     }
-    search_proc.process_end();
+    search_proc.close();
+    notify_proc.close();
 }
 
 }

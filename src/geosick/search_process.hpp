@@ -57,7 +57,7 @@ public:
     SearchProcess(const Config* cfg, const Sampler* sampler,
         const GeoSearch* search, const SickMap* sick_map, NotifyProcess* notify_proc);
     void process_query_row(const GeoRow& row);
-    void process_end();
+    void close();
 };
 
 }

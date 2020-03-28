@@ -200,6 +200,9 @@ function handleFile() {
         }
       }
     }
+    matches.sort(function(m1, m2) {
+      return m2.score - m1.score;
+    });
     setStatus("OK");
     setMatchIdx(0);
   };
@@ -435,7 +438,7 @@ inputElems.pause.addEventListener("click", stopAnimation, false);
 function setSidebarMatch(match) {
   sidebarElems.queryId.innerText = match ? match.query_user_id : "n/a";
   sidebarElems.sickId.innerText = match ? match.sick_user_id : "n/a";
-  sidebarElems.score.innerText = match ? match.score.toFixed(3) : "n/a";
+  sidebarElems.score.innerText = match ? match.score.toFixed(4) : "n/a";
   sidebarElems.minDistance.innerText = match
     ? match.min_distance_m.toFixed(1) + " m" : "n/a";
 }

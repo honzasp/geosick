@@ -1,8 +1,10 @@
-#include <nlohmann/json.hpp>
+#include <rapidjson/writer.h>
 #include "geosick/notify_process.hpp"
 #include "geosick/sampler.hpp"
 
 namespace geosick {
+
+using JsonWriter = rapidjson::Writer<rapidjson::StringBuffer>;
 
 NotifyProcess::NotifyProcess(const Sampler* sampler,
     const std::filesystem::path& matches_path)
@@ -11,87 +13,106 @@ NotifyProcess::NotifyProcess(const Sampler* sampler,
     m_matches_output.open(matches_path);
 }
 
-static nlohmann::json row_to_json(const GeoRow& row) {
-    nlohmann::json doc {
-        {"user_id", row.user_id},
-        {"timestamp_utc_s", row.timestamp_utc_s},
-        {"lat_e7", row.lat},
-        {"lon_e7", row.lon},
-        {"accuracy_m", row.accuracy_m},
-    };
+
+static void row_to_json(JsonWriter& w, const GeoRow& row) {
+    w.StartObject();
+    w.Key("user_id"); w.Uint(row.user_id);
+    w.Key("timestamp_utc_s"); w.Uint(row.timestamp_utc_s);
+    w.Key("lat_e7"); w.Int(row.lat);
+    w.Key("lon_e7"); w.Int(row.lon);
+    w.Key("accuracy_m"); w.Uint(row.accuracy_m);
     if (row.altitude_m != UINT16_MAX) {
-        doc["altitude_m"] = row.altitude_m;
+        w.Key("altitude_m"); w.Uint(row.altitude_m);
     }
     if (row.heading_deg != UINT16_MAX) {
-        doc["heading_deg"] = row.heading_deg;
+        w.Key("heading_deg"); w.Uint(row.heading_deg);
     }
-    doc["velocity_mps"] = row.velocity_mps;
-    return doc;
+    w.Key("velocity_mps"), w.Double(row.velocity_mps);
+    w.EndObject();
 }
 
-static nlohmann::json timestamp_to_json(UtcTime time) {
-    return time.time_since_epoch().count();
+static void timestamp_to_json(JsonWriter& w, UtcTime time) {
+    w.Int(time.time_since_epoch().count());
 }
 
-static nlohmann::json sample_to_json(const Sampler& sampler, const GeoSample& sample) {
-    nlohmann::json doc;
-    doc["time_index"] = sample.time_index;
-    doc["timestamp_utc_s"] = timestamp_to_json(
+static void sample_to_json(JsonWriter& w,
+    const Sampler& sampler, const GeoSample& sample)
+{
+    w.StartObject();
+    w.Key("time_index"); w.Uint(sample.time_index);
+    w.Key("timestamp_utc_s"); timestamp_to_json(w,
         sampler.time_index_to_timestamp(sample.time_index));
-    doc["user_id"] = sample.user_id;
-    doc["lat_e7"] = sample.lat;
-    doc["lon_e7"] = sample.lon;
-    doc["accuracy_m"] = (double)sample.accuracy_m;
-    return doc;
+    w.Key("user_id"); w.Uint(sample.user_id);
+    w.Key("lat_e7"); w.Int(sample.lat);
+    w.Key("lon_e7"); w.Int(sample.lon);
+    w.Key("accuracy_m"); w.Uint(sample.accuracy_m);
+    w.EndObject();
 }
 
-static nlohmann::json step_to_json(const Sampler& sampler, const MatchStep& step) {
-    nlohmann::json doc;
-    doc["time_index"] = step.time_index;
-    doc["timestamp_utc_s"] = timestamp_to_json(
+static void step_to_json(JsonWriter& w,
+    const Sampler& sampler, const MatchStep& step)
+{
+    w.StartObject();
+    w.Key("time_index"); w.Uint(step.time_index);
+    w.Key("timestamp_utc_s"); timestamp_to_json(w,
         sampler.time_index_to_timestamp(step.time_index));
-    doc["infect_rate"] = step.infect_rate;
-    doc["distance_m"] = step.distance_m;
-    return doc;
+    w.Key("infect_rate"); w.Double(step.infect_rate);
+    w.Key("distance_m"); w.Double(step.distance_m);
+    w.EndObject();
 }
 
-static nlohmann::json match_to_json(const Sampler& sampler,
+static void match_to_json(JsonWriter& w, const Sampler& sampler,
     const MatchInput& mi, const MatchOutput& mo)
 {
-    nlohmann::json doc;
-    doc["query_user_id"] = mi.query_user_id;
-    doc["sick_user_id"] = mi.sick_user_id;
+    w.StartObject();
+    w.Key("query_user_id"); w.Uint(mi.query_user_id);
+    w.Key("sick_user_id"); w.Uint(mi.sick_user_id);
 
-    doc["query_rows"] = nlohmann::json::array();
-    doc["sick_rows"] = nlohmann::json::array();
+    w.Key("query_rows");
+    w.StartArray();
     for (const auto& query_row: mi.query_rows) {
-        doc["query_rows"].push_back(row_to_json(query_row));
+        row_to_json(w, query_row);
     }
+    w.EndArray();
+
+    w.Key("sick_rows");
+    w.StartArray();
     for (const auto& sick_row: mi.sick_rows) {
-        doc["sick_rows"].push_back(row_to_json(sick_row));
+        row_to_json(w, sick_row);
     }
+    w.EndArray();
 
-    doc["query_samples"] = nlohmann::json::array();
-    doc["sick_samples"] = nlohmann::json::array();
+    w.Key("query_samples");
+    w.StartArray();
     for (const auto& query_sample: mi.query_samples) {
-        doc["query_samples"].push_back(sample_to_json(sampler, query_sample));
+        sample_to_json(w, sampler, query_sample);
     }
+    w.EndArray();
+
+    w.Key("sick_samples");
+    w.StartArray();
     for (const auto& sick_sample: mi.sick_samples) {
-        doc["sick_samples"].push_back(sample_to_json(sampler, sick_sample));
+        sample_to_json(w, sampler, sick_sample);
     }
+    w.EndArray();
 
-    doc["steps"] = nlohmann::json::array();
+    w.Key("steps");
+    w.StartArray();
     for (const auto& step: mo.steps) {
-        doc["steps"].push_back(step_to_json(sampler, step));
+        step_to_json(w, sampler, step);
     }
+    w.EndArray();
 
-    doc["score"] = mo.score;
-    doc["min_distance_m"] = mo.min_distance_m;
-    return doc;
+    w.Key("score"); w.Double(mo.score);
+    w.Key("min_distance_m"); w.Double(mo.min_distance_m);
+    w.EndObject();
 }
 
 void NotifyProcess::notify(const MatchInput& mi, const MatchOutput& mo) {
-    m_matches_output << match_to_json(*m_sampler, mi, mo) << std::endl;
+    rapidjson::Writer<rapidjson::StringBuffer> w(m_match_buffer);
+    match_to_json(w, *m_sampler, mi, mo);
+    m_matches_output << m_match_buffer.GetString() << std::endl;
+    m_match_buffer.Clear();
 }
 
 void NotifyProcess::close() {

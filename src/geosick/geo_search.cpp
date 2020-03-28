@@ -8,9 +8,10 @@
 namespace geosick {
 namespace {
 
-int32_t pow2(int32_t x) {
+uint32_t pow2(uint32_t x) {
     return x*x;
 }
+
 
 /*
 bool
@@ -21,7 +22,7 @@ circles_intersect(int32_t lat1, int32_t lon1, int32_t r1, int32_t lat2, int32_t 
 */
 
 bool
-circles_intersect_fast(int32_t lat1, int32_t lon1, int32_t r1, int32_t lat2, int32_t lon2, int32_t r2)
+circles_intersect_fast(int32_t lat1, int32_t lon1, uint32_t r1, int32_t lat2, int32_t lon2, uint32_t r2)
 {
     return pow2_geo_distance_fast_m(lat1, lon1, lat2, lon2) <= pow2(r1 + r2);
 }
@@ -39,7 +40,7 @@ GeoSearch::GeoSearch(const std::vector<GeoSample>& samples)
 }
 
 void GeoSearch::find_users_within_circle(int32_t lat, int32_t lon,
-    unsigned radius, TimeIdx time_index,
+    uint32_t radius, TimeIdx time_index,
     std::unordered_set<uint32_t>& out_user_ids) const
 {
     SectorKey key{time_index, get_lat_key(lat), get_lon_key(lon)};
@@ -102,7 +103,7 @@ GeoSearch::get_lat_delta() {
     static constexpr int32_t lat2 = lat1;
     static constexpr int32_t lon2 = 166000000;
     auto angle_per_meter = abs(lon1 - lon2) / geo_distance_haversine_m(lat1, lon1, lat2, lon2);
-    return angle_per_meter * GPS_HASH_PRECISION_M;
+    return int32_t(angle_per_meter * GPS_HASH_PRECISION_M);
 }
 
 int32_t
@@ -112,7 +113,7 @@ GeoSearch::get_lon_delta() {
     static constexpr int32_t lat2 = 492000000;
     static constexpr int32_t lon2 = lon1;
     auto angle_per_meter = abs(lat1 - lat2) / geo_distance_haversine_m(lat1, lon1, lat2, lon2);
-    return angle_per_meter * GPS_HASH_PRECISION_M;
+    return int32_t(angle_per_meter * GPS_HASH_PRECISION_M);
 }
 
 }

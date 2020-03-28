@@ -35,5 +35,5 @@ executable('zostanzdravy', sources,
   include_directories: includes,
   dependencies: [mysql_dep, mysqlpp_dep, stdcppfs_dep, boost_dep],
   override_options: ['cpp_std=c++17'],
-  cpp_args: ['-Wextra'],
+  cpp_args: ['-Wextra', '-Wconversion', '-Wsign-conversion', '-fno-omit-frame-pointer'],
 )

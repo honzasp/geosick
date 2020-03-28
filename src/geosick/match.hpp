@@ -1,3 +1,4 @@
+#include <vector>
 #include "geosick/config.hpp"
 #include "geosick/slice.hpp"
 

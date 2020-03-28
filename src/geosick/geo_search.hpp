@@ -30,7 +30,7 @@ public:
     explicit GeoSearch(const std::vector<GeoSample>& samples);
 
     void find_users_within_circle(int32_t lat, int32_t lon,
-        unsigned radius_m, TimeIdx time_index,
+        uint32_t radius_m, TimeIdx time_index,
         std::unordered_set<uint32_t>& out_user_ids) const;
 
 private:

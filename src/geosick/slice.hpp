@@ -25,7 +25,7 @@ public:
     { }
 
     size_t size() const {
-        return m_end - m_begin;
+        return (size_t)(m_end - m_begin);
     }
 
     reference at(const size_t idx) const {

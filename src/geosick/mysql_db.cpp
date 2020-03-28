@@ -51,7 +51,7 @@ std::optional<GeoRow> MysqlReader::read() {
     res.timestamp_utc_s = row.at(1);
     res.lat = row.at(2);
     res.lon = row.at(3);
-    res.accuracy_m = !row.at(4).is_null() ? row.at(4) : 50;
+    res.accuracy_m = !row.at(4).is_null() ? (uint16_t)row.at(4) : 50;
     if (!row.at(5).is_null()) {
         res.heading_deg = row.at(5);
     }

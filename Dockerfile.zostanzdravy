@@ -1,0 +1,16 @@
+FROM ubuntu:eoan AS zostanzdravy-base
+RUN apt-get update && \
+    apt-get -y install libmysql++3v5
+
+FROM zostanzdravy-base AS zostanzdravy-build
+RUN apt-get -y install libmysql++-dev libboost-dev \
+    meson ninja-build g++ pkg-config
+WORKDIR /zostanzdravy
+COPY src src
+COPY extern extern
+COPY meson.build meson.build
+RUN meson setup build/ && ninja -C build
+
+FROM zostanzdravy-base AS zostanzdravy
+COPY --from=zostanzdravy-build /zostanzdravy/build/zostanzdravy /bin/zostanzdravy
+ENTRYPOINT ["/bin/zostanzdravy"]

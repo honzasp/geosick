@@ -9,7 +9,7 @@ WORKDIR /zostanzdravy
 COPY src src
 COPY extern extern
 COPY meson.build meson.build
-RUN meson setup build/ && ninja -C build
+RUN meson setup --buildtype debugoptimized build/ && ninja -C build
 
 FROM zostanzdravy-base AS zostanzdravy
 COPY --from=zostanzdravy-build /zostanzdravy/build/zostanzdravy /bin/zostanzdravy

@@ -37,5 +37,5 @@ executable('zostanzdravy', sources,
   include_directories: includes,
   dependencies: deps,
   override_options: ['cpp_std=c++17'],
-  cpp_args: ['-Wextra', '-Wconversion', '-Wsign-conversion', '-fno-omit-frame-pointer'],
+  cpp_args: ['-Wextra', '-Wconversion', '-Wsign-conversion'],
 )

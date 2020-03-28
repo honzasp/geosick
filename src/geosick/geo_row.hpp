@@ -11,7 +11,7 @@ struct GeoRow {
     uint16_t accuracy_m;
     uint16_t altitude_m = UINT16_MAX;
     uint16_t heading_deg = UINT16_MAX;
-    float velocity_mps = 0;
+    int32_t velocity_mps = 0;
 };
 
 }

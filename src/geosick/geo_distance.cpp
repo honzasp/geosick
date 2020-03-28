@@ -19,8 +19,6 @@ double degree_to_radian(int32_t angle_int) {
 } // END OF ANONYMOUS NAMESPACE
 
 double geo_distance_haversine_m(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2) {
-    static constexpr double earth_radius_m = 6372.8 * 1000;
-
     double lat_rad1 = degree_to_radian(lat1);
 	double lon_rad1 = degree_to_radian(lon1);
 	double lat_rad2 = degree_to_radian(lat2);
@@ -33,7 +31,7 @@ double geo_distance_haversine_m(int32_t lat1, int32_t lon1, int32_t lat2, int32_
         sqrt(sin(diff_la / 2) * sin(diff_la / 2)
         + cos(lat_rad1) * cos(lat_rad2) * sin(diff_lo / 2) * sin(diff_lo / 2))
     );
-	return 2 * earth_radius_m * computation;
+	return 2 * EARTH_RADIUS_M * computation;
 }
 
 double pow2_geo_distance_fast_m(int32_t lat1, int32_t lon1, int32_t lat2, int32_t lon2) {

@@ -17,7 +17,7 @@ struct MatchInput {
 };
 
 struct MatchStep {
-    uint32_t time_index;
+    int32_t time_index;
     double infect_rate;
     double distance_m;
 };

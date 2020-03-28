@@ -1,7 +1,6 @@
 #include <fstream>
 #include <iostream>
-#include <rapidjson/document.h>
-#include <rapidjson/istreamwrapper.h>
+#include <nlohmann/json.hpp>
 #include "geosick/file_writer.hpp"
 #include "geosick/geo_search.hpp"
 #include "geosick/mysql_db.hpp"
@@ -11,17 +10,21 @@
 
 namespace geosick {
 
-static Config config_from_json(const rapidjson::Value& doc) {
+static Config config_from_json(const nlohmann::json& doc) {
     Config cfg;
-    cfg.mysql.db = doc["mysql"]["db"].GetString();
-    cfg.mysql.host = doc["mysql"]["host"].GetString();
-    cfg.mysql.port = doc["mysql"]["port"].GetUint();
-    cfg.mysql.user = doc["mysql"]["user"].GetString();
-    cfg.mysql.password = doc["mysql"]["password"].GetString();
-    cfg.range_days = doc["range_days"].GetUint();
-    cfg.period_s = doc["period_s"].GetUint();
-    cfg.temp_dir = doc["temp_dir"].GetString();
-    cfg.row_buffer_size = doc["row_buffer_size"].GetUint();
+    cfg.mysql.db = doc.at("mysql").at("db").get<std::string>();
+    cfg.mysql.host = doc.at("mysql").at("host").get<std::string>();
+    cfg.mysql.port = doc.at("mysql").at("port").get<uint32_t>();
+    cfg.mysql.user = doc.at("mysql").at("user").get<std::string>();
+    cfg.mysql.password = doc.at("mysql").at("password").get<std::string>();
+
+    cfg.search.bucket_count = doc.at("search").at("bucket_count").get<uint32_t>();
+    cfg.search.bin_delta_m = doc.at("search").at("bin_delta_m").get<double>();
+
+    cfg.range_days = doc.at("range_days").get<uint32_t>();
+    cfg.period_s = doc.at("period_s").get<uint32_t>();
+    cfg.temp_dir = doc.at("temp_dir").get<std::string>();
+    cfg.row_buffer_size = doc.at("row_buffer_size").get<uint32_t>();
     return cfg;
 }
 
@@ -61,10 +64,9 @@ static void main(int argc, char** argv) {
     }
 
     std::cout << "Initializing..." << std::endl;
-    rapidjson::Document config_doc; {
+    nlohmann::json config_doc; {
         std::ifstream config_file(argv[1]);
-        rapidjson::BasicIStreamWrapper config_stream(config_file);
-        config_doc.ParseStream(config_stream);
+        config_file >> config_doc;
     }
     Config cfg = config_from_json(config_doc);
     std::filesystem::path temp_dir = cfg.temp_dir;
@@ -85,7 +87,7 @@ static void main(int argc, char** argv) {
 
     std::cout << "Building the search structure..." << std::endl;
     auto sick_map = read_sick_map(sampler, read_proc.read_sick_rows());
-    GeoSearch search(sick_map.samples);
+    GeoSearch search(cfg, make_view(sick_map.samples));
 
     std::cout << "Searching for matches..." << std::endl;
     NotifyProcess notify_proc(&sampler, temp_dir / "matches.json");

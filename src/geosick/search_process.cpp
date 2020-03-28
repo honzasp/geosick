@@ -1,12 +1,10 @@
 #include <cassert>
+#include <iostream>
 #include "geosick/file_writer.hpp"
 #include "geosick/geo_search.hpp"
 #include "geosick/search_process.hpp"
 
 namespace geosick {
-
-using Hit = SearchProcess::Hit;
-using HitHash = SearchProcess::HitHash;
 
 SearchProcess::SearchProcess(const Config* cfg, const Sampler* sampler,
     const GeoSearch* search, const SickMap* sick_map, NotifyProcess* notify_proc)

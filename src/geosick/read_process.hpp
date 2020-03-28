@@ -19,6 +19,7 @@ class ReadProcess {
     uint32_t m_temp_file_counter = 0;
     uint32_t m_min_timestamp = UINT32_MAX;
     uint32_t m_max_timestamp = 0;
+    uint64_t m_query_row_count = 0;
 
     void flush_buffer(std::vector<GeoRow> buffer);
     void add_temp_file(std::unique_lock<std::mutex>& lock,

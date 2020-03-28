@@ -1,48 +1,45 @@
 #pragma once
-#include "geosick/sampler.hpp"
-#include <unordered_map>
 #include <unordered_set>
-#include <vector>
-#include <boost/functional/hash.hpp>
+#include "geosick/config.hpp"
+#include "geosick/sampler.hpp"
 
 namespace geosick {
 
 class GeoSearch {
-public:
-    using TimeIdx = uint32_t;
-
-private:
-    static constexpr double GPS_HASH_PRECISION_M = 200;
-    const int32_t m_lat_delta;
-    const int32_t m_lon_delta;
-
-    struct UserGeoPoint {
-        GeoSample::UserID user_id;
+    struct UserPoint {
+        int32_t time_index;
         int32_t lat, lon;
-        uint16_t accuracy_m;
+        uint32_t hash;
+        uint32_t radius_m;
+        uint32_t user_id;
     };
-    std::vector<UserGeoPoint> m_points;
-    using SectorKey = std::tuple<TimeIdx, int32_t, int32_t>;
-    std::unordered_map<SectorKey, std::vector<UserGeoPoint>, boost::hash<SectorKey>> m_sectors;
 
-public:
+    struct LatLonBins {
+        int32_t lat_first;
+        int32_t lat_last;
+        int32_t lon_first;
+        int32_t lon_last;
+    };
 
-    explicit GeoSearch(const std::vector<GeoSample>& samples);
+    int32_t m_lat_delta;
+    int32_t m_lon_delta;
+    size_t m_bucket_count;
+    std::vector<UserPoint> m_points;
+    std::vector<size_t> m_buckets;
 
-    void find_users_within_circle(int32_t lat, int32_t lon,
-        uint32_t radius_m, TimeIdx time_index,
+    LatLonBins get_bins(int32_t lat, int32_t lon, uint32_t radius) const;
+    uint32_t get_hash(int32_t lat_bin, int32_t lon_bin, int32_t time_index) const;
+
+    void find_users_in_bin(int32_t lat, int32_t lon, uint32_t radius_m,
+        int32_t time_index, int32_t lat_bin, int32_t lon_bin,
         std::unordered_set<uint32_t>& out_user_ids) const;
+    std::pair<size_t, size_t> find_time_range_in_bucket(
+        size_t bucket_idx, int32_t time_index) const;
+public:
+    explicit GeoSearch(const Config& cfg, ArrayView<const GeoSample> samples);
 
-private:
-    void insert_sample(const GeoSample& sample);
-    void insert_geo_point(const SectorKey& key, const UserGeoPoint& point);
-
-    int32_t get_lat_key(int32_t lat) const;
-    int32_t get_lon_key(int32_t lon) const;
-
-    static int32_t get_lat_delta();
-    static int32_t get_lon_delta();
-
+    void find_users_within_circle(int32_t lat, int32_t lon, uint32_t radius_m,
+        int32_t time_index, std::unordered_set<uint32_t>& out_user_ids) const;
 };
 
 }

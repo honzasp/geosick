@@ -8,7 +8,7 @@ namespace geosick {
 
 struct GeoSample {
     using UserID = uint32_t;
-    uint32_t time_index;
+    int32_t time_index;
     UserID user_id;
     int32_t lat;
     int32_t lon;
@@ -35,7 +35,7 @@ private:
 public:
     explicit Sampler(UtcTime begin_time, UtcTime end_time, DurationS period_s);
 
-    UtcTime time_index_to_timestamp(uint32_t time_index) const;
+    UtcTime time_index_to_timestamp(int32_t time_index) const;
 
     void
     sample(ArrayView<const GeoRow> rows, std::vector<GeoSample>& out_samples) const;

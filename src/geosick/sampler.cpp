@@ -37,7 +37,7 @@ Sampler::Sampler(UtcTime begin_time, UtcTime end_time, DurationS period)
     assert(m_begin_time <= m_end_time);
 }
 
-UtcTime Sampler::time_index_to_timestamp(uint32_t time_index) const {
+UtcTime Sampler::time_index_to_timestamp(int32_t time_index) const {
     return m_begin_time + m_period * time_index;
 }
 
@@ -104,7 +104,7 @@ Sampler::get_weighted_sample(const GeoRow& row, const GeoRow& next_row,
     assert(0 <= w2 && w2 <= 1);
 
     return GeoSample{
-        .time_index = uint32_t(offset / m_period),
+        .time_index = int32_t(offset / m_period),
         .user_id = row.user_id,
         .lat = int32_t(w1*row.lat + w2*next_row.lat),
         .lon = int32_t(w1*row.lon + w2*next_row.lon),

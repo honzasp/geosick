@@ -1,119 +1,166 @@
-#include "geosick/geo_search.hpp"
-#include "geosick/geo_distance.hpp"
-
-#define _USE_MATH_DEFINES
-#include <math.h>
+#include <algorithm>
 #include <cassert>
+#include <cmath>
+#include <iostream>
+#include "geosick/geo_distance.hpp"
+#include "geosick/geo_search.hpp"
 
 namespace geosick {
-namespace {
 
-uint32_t pow2(uint32_t x) {
-    return x*x;
+static const double DEG_E7_TO_M = 0.011119508;
+static const double M_TO_DEG_E7 = 89.93204;
+static const double DEG_E7_TO_RAD = 1.745329251994e-9;
+static const double MEAN_LAT_E7 = 50e7;
+
+GeoSearch::LatLonBins GeoSearch::get_bins(
+    int32_t lat, int32_t lon, uint32_t radius) const
+{
+    double lat_e7 = (double)lat;
+    double lon_e7 = (double)lon;
+    double delta_lat_e7 = (double)radius * M_TO_DEG_E7;
+    double delta_lon_e7 = (double)radius / std::cos(lat_e7*DEG_E7_TO_RAD) * M_TO_DEG_E7;
+
+    int32_t lat_first = (int32_t)std::floor(lat_e7 - delta_lat_e7);
+    int32_t lat_last = (int32_t)std::ceil(lat_e7 + delta_lat_e7);
+    int32_t lon_first = (int32_t)std::floor(lon_e7 - delta_lon_e7);
+    int32_t lon_last = (int32_t)std::ceil(lon_e7 + delta_lon_e7);
+
+    return LatLonBins {
+        .lat_first = lat_first / m_lat_delta,
+        .lat_last = lat_last / m_lat_delta,
+        .lon_first = lon_first / m_lon_delta,
+        .lon_last = lon_last / m_lon_delta,
+    };
+}
+
+uint32_t GeoSearch::get_hash(
+    int32_t lat_bin, int32_t lon_bin, int32_t time_index) const
+{
+    // https://en.wikipedia.org/wiki/MurmurHash
+    auto murmur_add = [](uint32_t h, uint32_t k) -> uint32_t {
+        k *= 0xcc9e2d51;
+        k = (k << 15) | (k >> 17);
+        k *= 0x1b873593;
+        h ^= k;
+        h = (h << 13) | (h >> 19);
+        h = h * 5 + 0xe6546b64;
+        return h;
+    };
+
+    uint32_t h = 0x8d0e03f0;
+    h = murmur_add(h, uint32_t(lat_bin));
+    h = murmur_add(h, uint32_t(lon_bin));
+    h = murmur_add(h, uint32_t(time_index));
+
+    h ^= h >> 16;
+	h *= 0x85ebca6b;
+	h ^= h >> 13;
+	h *= 0xc2b2ae35;
+	h ^= h >> 16;
+    return h;
 }
 
 
-/*
-bool
-circles_intersect(int32_t lat1, int32_t lon1, int32_t r1, int32_t lat2, int32_t lon2, int32_t r2)
-{
-    return geo_distance_haversine_m(lat1, lon1, lat2, lon2) <= r1 + r2;
-}
-*/
+GeoSearch::GeoSearch(const Config& cfg, ArrayView<const GeoSample> samples) {
+    m_lat_delta = (int32_t)std::ceil(
+        cfg.search.bin_delta_m * M_TO_DEG_E7);
+    m_lon_delta = (int32_t)std::ceil(
+        cfg.search.bin_delta_m * M_TO_DEG_E7 * std::cos(MEAN_LAT_E7*DEG_E7_TO_RAD));
+    m_bucket_count = cfg.search.bucket_count;
 
-bool
-circles_intersect_fast(int32_t lat1, int32_t lon1, uint32_t r1, int32_t lat2, int32_t lon2, uint32_t r2)
-{
-    return pow2_geo_distance_fast_m(lat1, lon1, lat2, lon2) <= pow2(r1 + r2);
-}
-
-} // END OF ANONYMOUS NAMESPACE
-
-
-GeoSearch::GeoSearch(const std::vector<GeoSample>& samples)
- : m_lat_delta(get_lat_delta()), m_lon_delta(get_lon_delta())
-{
-    m_points.reserve(samples.size());
+    std::vector<std::vector<UserPoint>> buckets(m_bucket_count);
+    size_t point_count = 0;
     for (const auto& sample: samples) {
-        insert_sample(sample);
+        auto bins = this->get_bins(sample.lat, sample.lon, sample.accuracy_m);
+        for (int32_t i = bins.lat_first; i <= bins.lat_last; ++i) {
+            for (int32_t j = bins.lon_first; j <= bins.lon_last; ++j) {
+                uint32_t hash = this->get_hash(i, j, sample.time_index);
+                size_t bucket_idx = hash % buckets.size();
+                buckets.at(bucket_idx).push_back(UserPoint {
+                    .time_index = sample.time_index,
+                    .lat = sample.lat,
+                    .lon = sample.lon,
+                    .hash = hash,
+                    .radius_m = sample.accuracy_m,
+                    .user_id = sample.user_id,
+                });
+                ++point_count;
+            }
+        }
     }
+
+    m_buckets.reserve(m_bucket_count+1);
+    m_points.reserve(point_count);
+    for (auto& bucket: buckets) {
+        std::sort(bucket.begin(), bucket.end(),
+            [&](const UserPoint& p1, const UserPoint& p2)
+        {
+            return p1.time_index < p2.time_index;
+        });
+
+        m_buckets.push_back(m_points.size());
+        m_points.insert(m_points.end(), bucket.begin(), bucket.end());
+    }
+    m_buckets.push_back(m_points.size());
+}
+
+void GeoSearch::find_users_in_bin(int32_t lat, int32_t lon, uint32_t radius_m,
+    int32_t time_index, int32_t lat_bin, int32_t lon_bin,
+    std::unordered_set<uint32_t>& out_user_ids) const
+{
+    uint32_t hash = this->get_hash(lat_bin, lon_bin, time_index);
+    size_t bucket_idx = hash % m_bucket_count;
+    auto [begin, end] = this->find_time_range_in_bucket(bucket_idx, time_index);
+    for (size_t i = begin; i < end; ++i) {
+        const auto& point = m_points.at(i);
+        assert(point.time_index == time_index);
+        if (point.hash != hash) { continue; }
+
+        double distance_pow2 = pow2_geo_distance_fast_m(
+            point.lat, point.lon, lat, lon);
+        double max_distance = (double)radius_m + (double)point.radius_m;
+        if (distance_pow2 > max_distance*max_distance) { continue; }
+
+        out_user_ids.insert(point.user_id);
+    }
+}
+
+std::pair<size_t,size_t> GeoSearch::find_time_range_in_bucket(
+    size_t bucket_idx, int32_t time_index) const
+{
+    size_t bucket_begin = m_buckets.at(bucket_idx);
+    size_t bucket_end = m_buckets.at(bucket_idx + 1);
+    while (bucket_begin < bucket_end) {
+        size_t bucket_mid = bucket_begin + (bucket_end - bucket_begin) / 2;
+        int32_t mid_time_index = m_points.at(bucket_mid).time_index;
+        if (mid_time_index < time_index) {
+            bucket_begin = bucket_mid + 1;
+        } else if (mid_time_index > time_index) {
+            bucket_end = bucket_mid;
+        } else {
+            size_t begin = bucket_mid;
+            for (; begin > bucket_begin 
+                && m_points.at(begin-1).time_index == time_index; --begin) {}
+            size_t end = bucket_mid + 1;
+            for (; end + 1 < bucket_end 
+                && m_points.at(end+1).time_index == time_index; ++end) {}
+            return {begin, end};
+        }
+    }
+    return {0, 0};
 }
 
 void GeoSearch::find_users_within_circle(int32_t lat, int32_t lon,
-    uint32_t radius, TimeIdx time_index,
+    uint32_t radius_m, int32_t time_index,
     std::unordered_set<uint32_t>& out_user_ids) const
 {
-    SectorKey key{time_index, get_lat_key(lat), get_lon_key(lon)};
-    auto it = m_sectors.find(key);
-    if (it == m_sectors.end()) { return; }
-
-    for (const auto& p: it->second) {
-        if (circles_intersect_fast(lat, lon, radius, p.lat, p.lon, p.accuracy_m)) {
-            out_user_ids.insert(p.user_id);
+    auto bins = this->get_bins(lat, lon, radius_m);
+    for (int32_t i = bins.lat_first; i <= bins.lat_last; ++i) {
+        for (int32_t j = bins.lon_first; j <= bins.lon_last; ++j) {
+            this->find_users_in_bin(lat, lon, radius_m, time_index,
+                i, j, out_user_ids);
         }
     }
-}
-
-void
-GeoSearch::insert_sample(const GeoSample& sample)
-{
-    UserGeoPoint geo_point{
-        .user_id = sample.user_id,
-        .lat = sample.lat,
-        .lon = sample.lon,
-        .accuracy_m = sample.accuracy_m,
-    };
-    auto lat_key = get_lat_key(sample.lat);
-    auto lon_key = get_lon_key(sample.lon);
-
-    for (auto lat_shift: {-1, 0, 1}) {
-        for (auto lon_shift: {-1, 0, 1}) { // TODO: This is maybe too much memory waste.
-            SectorKey key{sample.time_index, lat_key + lat_shift, lon_key + lon_shift};
-            insert_geo_point(key, geo_point);
-        }
-    }
-}
-
-void
-GeoSearch::insert_geo_point(const SectorKey& key, const UserGeoPoint& point)
-{
-    if (auto it = m_sectors.find(key); it != m_sectors.end()) {
-        m_sectors[key].push_back(point);
-    } else {
-        m_sectors[key] = {point};
-    }
-}
-
-int32_t
-GeoSearch::get_lat_key(int32_t lat) const
-{
-    return lat / m_lat_delta;
-}
-
-int32_t
-GeoSearch::get_lon_key(int32_t lon) const
-{
-    return lon / m_lon_delta;
-}
-
-int32_t
-GeoSearch::get_lat_delta() {
-    static constexpr int32_t lat1 = 491000000;
-    static constexpr int32_t lon1 = 165000000;
-    static constexpr int32_t lat2 = lat1;
-    static constexpr int32_t lon2 = 166000000;
-    auto angle_per_meter = abs(lon1 - lon2) / geo_distance_haversine_m(lat1, lon1, lat2, lon2);
-    return int32_t(angle_per_meter * GPS_HASH_PRECISION_M);
-}
-
-int32_t
-GeoSearch::get_lon_delta() {
-    static constexpr int32_t lat1 = 491000000;
-    static constexpr int32_t lon1 = 165000000;
-    static constexpr int32_t lat2 = 492000000;
-    static constexpr int32_t lon2 = lon1;
-    auto angle_per_meter = abs(lat1 - lat2) / geo_distance_haversine_m(lat1, lon1, lat2, lon2);
-    return int32_t(angle_per_meter * GPS_HASH_PRECISION_M);
 }
 
 }

@@ -11,6 +11,9 @@ NotifyProcess::NotifyProcess(const Sampler* sampler,
 {
     m_sampler = sampler;
     m_matches_output.open(matches_path);
+    if (!m_matches_output) {
+        throw std::runtime_error("Could not open file: " + matches_path.string());
+    }
 }
 
 
@@ -39,7 +42,7 @@ static void sample_to_json(JsonWriter& w,
     const Sampler& sampler, const GeoSample& sample)
 {
     w.StartObject();
-    w.Key("time_index"); w.Uint(sample.time_index);
+    w.Key("time_index"); w.Int(sample.time_index);
     w.Key("timestamp_utc_s"); timestamp_to_json(w,
         sampler.time_index_to_timestamp(sample.time_index));
     w.Key("user_id"); w.Uint(sample.user_id);
@@ -53,7 +56,7 @@ static void step_to_json(JsonWriter& w,
     const Sampler& sampler, const MatchStep& step)
 {
     w.StartObject();
-    w.Key("time_index"); w.Uint(step.time_index);
+    w.Key("time_index"); w.Int(step.time_index);
     w.Key("timestamp_utc_s"); timestamp_to_json(w,
         sampler.time_index_to_timestamp(step.time_index));
     w.Key("infect_rate"); w.Double(step.infect_rate);

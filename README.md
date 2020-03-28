@@ -7,12 +7,6 @@ a functionality for GPS sequencies analysis to determine the probability of a he
 getting infected by someone sick (e.g. infected by the Covid19 virus). We provide two main
 services.
 
-## HTTP Server
-
-Our HTTP server provides a simple API for evaluating two sequencies of GPS locations and returns
-a probability with which one person was infected by another. More info in the
-[HTTP server docs](docs/http_server.md).
-
 ## Batch processing
 
 For processing of a large number of users and their GPS sequences, we provide a C++ tool that is

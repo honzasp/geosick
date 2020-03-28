@@ -1,5 +1,6 @@
 #pragma once
 #include <filesystem>
+#include <mutex>
 #include <vector>
 #include <unordered_set>
 #include "geosick/geo_row_reader.hpp"
@@ -12,17 +13,16 @@ class ReadProcess {
     std::filesystem::path m_temp_dir;
     size_t m_row_buffer_size;
 
-    std::vector<GeoRow> m_row_buffer;
+    std::mutex m_mutex;
     std::vector<GeoRow> m_sick_rows;
     std::vector<std::vector<std::filesystem::path>> m_temp_files;
     uint32_t m_temp_file_counter = 0;
     uint32_t m_min_timestamp = UINT32_MAX;
     uint32_t m_max_timestamp = 0;
 
-    void flush_buffer();
-    void add_temp_file(std::filesystem::path path, size_t level);
-    std::filesystem::path merge_temp_files(
-        const std::vector<std::filesystem::path>& files);
+    void flush_buffer(std::vector<GeoRow> buffer);
+    void add_temp_file(std::unique_lock<std::mutex>& lock,
+        std::filesystem::path path, size_t level);
     std::filesystem::path gen_temp_file();
 public:
     ReadProcess(const std::unordered_set<uint32_t>* sick_user_ids,

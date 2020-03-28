@@ -1,4 +1,6 @@
 #include <algorithm>
+#include <future>
+#include <iostream>
 #include "geosick/file_reader.hpp"
 #include "geosick/file_writer.hpp"
 #include "geosick/merge_reader.hpp"
@@ -28,34 +30,22 @@ ReadProcess::ReadProcess(const std::unordered_set<uint32_t>* sick_user_ids,
     m_row_buffer_size(row_buffer_size)
 {}
 
-void ReadProcess::flush_buffer() {
-    std::sort(m_row_buffer.begin(), m_row_buffer.end(), CompareRows());
+void ReadProcess::flush_buffer(std::vector<GeoRow> buffer) {
+    std::sort(buffer.begin(), buffer.end(), CompareRows());
 
+    std::unique_lock<std::mutex> lock(m_mutex);
     auto temp_path = this->gen_temp_file();
+    lock.unlock();
+
     FileWriter writer(temp_path);
-    writer.write(make_view(m_row_buffer));
+    writer.write(make_view(buffer));
     writer.close();
-    m_row_buffer.clear();
 
-    this->add_temp_file(temp_path, 0);
+    lock.lock();
+    this->add_temp_file(lock, temp_path, 0);
 }
 
-void ReadProcess::add_temp_file(std::filesystem::path path, size_t level) {
-    const size_t MAX_MERGE_SIZE = 4;
-    for (;;) {
-        while (m_temp_files.size() <= level) {
-            m_temp_files.emplace_back();
-        }
-        m_temp_files.at(level).push_back(path);
-        if (m_temp_files.at(level).size() <= MAX_MERGE_SIZE) { break; }
-
-        path = merge_temp_files(m_temp_files.at(level));
-        m_temp_files.at(level).clear();
-        level += 1;
-    }
-}
-
-std::filesystem::path ReadProcess::merge_temp_files(
+static void merge_temp_files(const std::filesystem::path& out_file,
     const std::vector<std::filesystem::path>& files)
 {
     MergeReader<CompareRows> merger { CompareRows() };
@@ -64,12 +54,30 @@ std::filesystem::path ReadProcess::merge_temp_files(
         std::filesystem::remove(path);
     }
 
-    auto out_file = this->gen_temp_file();
     FileWriter writer(out_file);
     while (auto row = merger.read()) {
         writer.write(*row);
     }
-    return out_file;
+}
+
+void ReadProcess::add_temp_file(std::unique_lock<std::mutex>& lock,
+    std::filesystem::path path, size_t level)
+{
+    const size_t MAX_MERGE_SIZE = 4;
+    for (;;) {
+        while (m_temp_files.size() <= level) {
+            m_temp_files.emplace_back();
+        }
+        m_temp_files.at(level).push_back(path);
+        if (m_temp_files.at(level).size() <= MAX_MERGE_SIZE) { break; }
+
+        path = this->gen_temp_file();
+        lock.unlock();
+        merge_temp_files(path, m_temp_files.at(level));
+        lock.lock();
+        m_temp_files.at(level).clear();
+        level += 1;
+    }
 }
 
 std::filesystem::path ReadProcess::gen_temp_file() {
@@ -78,7 +86,17 @@ std::filesystem::path ReadProcess::gen_temp_file() {
 }
 
 void ReadProcess::process(GeoRowReader& reader) {
-    m_row_buffer.reserve(m_row_buffer_size);
+    std::future<void> flush_future;
+    std::vector<GeoRow> buffer;
+    auto flush = [&] {
+        std::cout << "  flush " << buffer.size() << std::endl;
+        if (flush_future.valid()) { flush_future.wait(); }
+        flush_future = std::async(
+            &ReadProcess::flush_buffer, this, std::move(buffer));
+        buffer.clear();
+    };
+
+    buffer.reserve(m_row_buffer_size);
     while (auto row = reader.read()) {
         m_min_timestamp = std::min(m_min_timestamp, row->timestamp_utc_s);
         m_max_timestamp = std::max(m_max_timestamp, row->timestamp_utc_s);
@@ -86,19 +104,19 @@ void ReadProcess::process(GeoRowReader& reader) {
         if (m_sick_user_ids->count(row->user_id)) {
             m_sick_rows.push_back(*row);
         } else if (m_query_user_ids->count(row->user_id)) {
-            m_row_buffer.push_back(*row);
-            if (m_row_buffer.size() >= m_row_buffer_size) {
-                this->flush_buffer();
+            buffer.push_back(*row);
+            if (buffer.size() >= m_row_buffer_size) {
+                flush();
+                buffer.reserve(m_row_buffer_size);
             }
         }
     }
 
-    if (m_row_buffer.size() > 0) {
-        this->flush_buffer();
+    if (buffer.size() > 0) {
+        flush();
     }
-    m_row_buffer.shrink_to_fit();
-
     std::sort(m_sick_rows.begin(), m_sick_rows.end(), CompareRows());
+    if (flush_future.valid()) { flush_future.wait(); }
 }
 
 std::unique_ptr<GeoRowReader> ReadProcess::read_query_rows() {

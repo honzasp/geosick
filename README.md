@@ -1,8 +1,7 @@
 # Geosick
 
 Geosick is a library written for the Covid19cz and ZostanZdravy initiatives by Jan Plhák
-(jan.plhak@kiwi.com) and Jan Špaček (patek.mail@gmail.com) from
-[distributa.io](https://www.distributa.io). The purpose of the library is to provide
+(jan.plhak@kiwi.com) and Jan Špaček (patek.mail@gmail.com). The purpose of the library is to provide
 a functionality for GPS sequencies analysis to determine the probability of a healthy person
 getting infected by someone sick (e.g. infected by the Covid19 virus). We provide two main
 services.

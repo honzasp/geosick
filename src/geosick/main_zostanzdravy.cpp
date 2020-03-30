@@ -13,8 +13,7 @@ namespace geosick {
 static Config config_from_json(const nlohmann::json& doc) {
     Config cfg;
     cfg.mysql.db = doc.at("mysql").at("db").get<std::string>();
-    cfg.mysql.host = doc.at("mysql").at("host").get<std::string>();
-    cfg.mysql.port = doc.at("mysql").at("port").get<uint32_t>();
+    cfg.mysql.server = doc.at("mysql").at("server").get<std::string>();
     cfg.mysql.user = doc.at("mysql").at("user").get<std::string>();
     cfg.mysql.password = doc.at("mysql").at("password").get<std::string>();
 

@@ -6,8 +6,7 @@ namespace geosick {
 struct Config {
     struct Mysql {
         std::string db;
-        std::string host;
-        uint32_t port;
+        std::string server;
         std::string user;
         std::string password;
     } mysql;

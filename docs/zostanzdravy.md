@@ -31,8 +31,7 @@ The config file is a JSON with the following structure:
     {
         "mysql": {
             "db": "<MySQL database name>",
-            "host": "<MySQL server hostname>",
-            "port": <MySQL server port>,
+            "server": "<MySQL server as hostname:port or /path/to/socket>",
             "user": "<MySQL user name>",
             "password": "<MySQL user password>"
         },

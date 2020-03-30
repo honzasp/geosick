@@ -43,9 +43,8 @@ static uint16_t read_u16(const mysqlpp::String& str) {
 
 
 MysqlDb::MysqlDb(const Config& cfg) {
-    m_conn.connect(cfg.mysql.db.c_str(), cfg.mysql.host.c_str(),
-        cfg.mysql.user.c_str(), cfg.mysql.password.c_str(),
-        cfg.mysql.port);
+    m_conn.connect(cfg.mysql.db.c_str(), cfg.mysql.server.c_str(),
+        cfg.mysql.user.c_str(), cfg.mysql.password.c_str());
 }
 
 std::unique_ptr<MysqlReader> MysqlDb::read_rows() {

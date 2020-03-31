@@ -1,4 +1,5 @@
 #pragma once
+#include <atomic>
 #include <unordered_set>
 #include "geosick/config.hpp"
 #include "geosick/sampler.hpp"
@@ -27,6 +28,12 @@ class GeoSearch {
     std::vector<UserPoint> m_points;
     std::vector<size_t> m_buckets;
 
+    mutable std::atomic<uint64_t> m_query_count { 0 };
+    mutable std::atomic<uint64_t> m_bin_hit_count { 0 };
+    mutable std::atomic<uint64_t> m_point_hit_count { 0 };
+    mutable std::atomic<uint64_t> m_point_test_count { 0 };
+    mutable std::atomic<uint64_t> m_point_pass_count { 0 };
+
     LatLonBins get_bins(int32_t lat, int32_t lon, uint32_t radius) const;
     uint32_t get_hash(int32_t lat_bin, int32_t lon_bin, int32_t time_index) const;
 
@@ -40,6 +47,8 @@ public:
 
     void find_users_within_circle(int32_t lat, int32_t lon, uint32_t radius_m,
         int32_t time_index, std::unordered_set<uint32_t>& out_user_ids) const;
+
+    void close();
 };
 
 }

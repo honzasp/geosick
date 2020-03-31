@@ -102,6 +102,9 @@ GeoSearch::GeoSearch(const Config& cfg, ArrayView<const GeoSample> samples) {
         m_points.insert(m_points.end(), bucket.begin(), bucket.end());
     }
     m_buckets.push_back(m_points.size());
+
+    std::cout << "  built search structure of " << point_count << " points "
+        "from " << samples.size() << " samples" << std::endl;
 }
 
 void GeoSearch::find_users_in_bin(int32_t lat, int32_t lon, uint32_t radius_m,
@@ -114,15 +117,19 @@ void GeoSearch::find_users_in_bin(int32_t lat, int32_t lon, uint32_t radius_m,
     for (size_t i = begin; i < end; ++i) {
         const auto& point = m_points.at(i);
         assert(point.time_index == time_index);
+        m_point_hit_count.fetch_add(1);
         if (point.hash != hash) { continue; }
 
+        m_point_test_count.fetch_add(1);
         double distance_pow2 = pow2_geo_distance_fast_m(
             point.lat, point.lon, lat, lon);
         double max_distance = (double)radius_m + (double)point.radius_m;
         if (distance_pow2 > max_distance*max_distance) { continue; }
 
+        m_point_pass_count.fetch_add(1);
         out_user_ids.insert(point.user_id);
     }
+    m_bin_hit_count.fetch_add(1);
 }
 
 std::pair<size_t,size_t> GeoSearch::find_time_range_in_bucket(
@@ -161,6 +168,16 @@ void GeoSearch::find_users_within_circle(int32_t lat, int32_t lon,
                 i, j, out_user_ids);
         }
     }
+    m_query_count.fetch_add(1);
+}
+
+void GeoSearch::close() {
+    std::cout << "Search stats:" << std::endl
+        << "  queries: " << m_query_count.load() << std::endl
+        << "  bin hits: " << m_bin_hit_count.load() << std::endl
+        << "  point hits: " << m_point_hit_count.load() << std::endl
+        << "  point tests: " << m_point_test_count.load() << std::endl
+        << "  point passes: " << m_point_pass_count.load() << std::endl;
 }
 
 }

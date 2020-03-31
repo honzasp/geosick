@@ -99,6 +99,7 @@ static void main(int argc, char** argv) {
         search_proc.process_query_row(*row);
     }
     search_proc.close();
+    search.close();
     notify_proc.close();
 
     std::cout << "Done" << std::endl;

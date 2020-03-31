@@ -89,7 +89,7 @@ void ReadProcess::process(GeoRowReader& reader) {
     std::future<void> flush_future;
     std::vector<GeoRow> buffer;
     auto flush = [&] {
-        std::cout << "  Flush " << buffer.size() << " rows" << std::endl;
+        std::cout << "  flush " << buffer.size() << " rows" << std::endl;
         m_query_row_count += buffer.size();
         if (flush_future.valid()) { flush_future.get(); }
         flush_future = std::async(std::launch::async,
@@ -119,7 +119,7 @@ void ReadProcess::process(GeoRowReader& reader) {
     std::sort(m_sick_rows.begin(), m_sick_rows.end(), CompareRows());
     if (flush_future.valid()) { flush_future.get(); }
 
-    std::cout << "  Loaded " << m_query_row_count << " query rows, "
+    std::cout << "  loaded " << m_query_row_count << " query rows, "
         << m_sick_rows.size() << " sick rows" << std::endl;
 }
 

@@ -12,6 +12,7 @@ class NotifyProcess {
     const Sampler* m_sampler;
     std::ofstream m_matches_output;
     rapidjson::StringBuffer m_match_buffer;
+    uint64_t m_match_count { 0 };
 public:
     NotifyProcess(const Sampler* sampler, const std::filesystem::path& matches_path);
     void notify(const MatchInput& mi, const MatchOutput& mo);

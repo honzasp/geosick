@@ -1,3 +1,4 @@
+#include <iostream>
 #include <rapidjson/writer.h>
 #include "geosick/notify_process.hpp"
 #include "geosick/sampler.hpp"
@@ -116,9 +117,11 @@ void NotifyProcess::notify(const MatchInput& mi, const MatchOutput& mo) {
     match_to_json(w, *m_sampler, mi, mo);
     m_matches_output << m_match_buffer.GetString() << std::endl;
     m_match_buffer.Clear();
+    m_match_count += 1;
 }
 
 void NotifyProcess::close() {
+    std::cout << "Reported " << m_match_count << " matches" << std::endl;
     m_matches_output.close();
 }
 

@@ -20,6 +20,10 @@ class SearchProcess {
     std::vector<GeoRow> m_current_rows;
     std::vector<GeoSample> m_current_samples;
 
+    uint64_t m_user_count { 0 };
+    uint64_t m_row_count { 0 };
+    uint64_t m_sample_count { 0 };
+
     void flush_user_rows();
 
 public:

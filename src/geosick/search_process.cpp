@@ -37,6 +37,10 @@ void SearchProcess::flush_user_rows() {
         m_notify_proc->notify(mi, mo);
     }
 
+    m_user_count += 1;
+    m_row_count += m_current_rows.size();
+    m_sample_count += m_current_samples.size();
+
     m_current_samples.clear();
     m_current_rows.clear();
 }
@@ -52,6 +56,10 @@ void SearchProcess::process_query_row(const GeoRow& row) {
 
 void SearchProcess::close() {
     this->flush_user_rows();
+    std::cout << "Search process stats:" << std::endl
+        << "  query users: " << m_user_count << std::endl
+        << "  query rows: " << m_row_count << std::endl
+        << "  query samples: " << m_sample_count << std::endl;
 }
 
 }

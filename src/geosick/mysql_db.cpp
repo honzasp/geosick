@@ -1,3 +1,4 @@
+#include <mysql++/dbdriver.h>
 #include "geosick/mysql_db.hpp"
 
 namespace geosick {
@@ -41,8 +42,33 @@ static uint16_t read_u16(const mysqlpp::String& str) {
 
 
 
+namespace {
+    using namespace mysqlpp;
+    class SslModeOption final: public IntegerOption {
+    public:
+        explicit SslModeOption(unsigned mode): IntegerOption(mode) {}
+        virtual Error set(DBDriver* dbd) override {
+            return dbd->connected() ? Option::err_connected
+                : !dbd->set_option(MYSQL_OPT_SSL_MODE, &arg_) ? Option::err_api_reject
+                : Option::err_NONE;
+        }
+    };
+}
 
 MysqlDb::MysqlDb(const Config& cfg) {
+    auto mode_str = cfg.mysql.ssl_mode;
+    unsigned int mode_flag;
+    if (mode_str == "DISABLED") {
+        mode_flag = SSL_MODE_DISABLED;
+    } else if (mode_str == "PREFERRED") {
+        mode_flag = SSL_MODE_PREFERRED;
+    } else if (mode_str == "REQUIRED") {
+        mode_flag = SSL_MODE_REQUIRED;
+    } else {
+        throw std::runtime_error("Invalid value of mysql.ssl_mode: '" + mode_str + "'");
+    }
+    m_conn.driver()->set_option(new SslModeOption(mode_flag));
+
     m_conn.connect(cfg.mysql.db.c_str(), cfg.mysql.server.c_str(),
         cfg.mysql.user.c_str(), cfg.mysql.password.c_str());
 }

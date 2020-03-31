@@ -9,6 +9,7 @@ struct Config {
         std::string server;
         std::string user;
         std::string password;
+        std::string ssl_mode;
     } mysql;
 
     struct Search {

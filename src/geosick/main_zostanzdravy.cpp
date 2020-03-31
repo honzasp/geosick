@@ -12,18 +12,21 @@ namespace geosick {
 
 static Config config_from_json(const nlohmann::json& doc) {
     Config cfg;
-    cfg.mysql.db = doc.at("mysql").at("db").get<std::string>();
-    cfg.mysql.server = doc.at("mysql").at("server").get<std::string>();
-    cfg.mysql.user = doc.at("mysql").at("user").get<std::string>();
-    cfg.mysql.password = doc.at("mysql").at("password").get<std::string>();
+    auto mysql_doc = doc.at("mysql");
+    cfg.mysql.db = mysql_doc.at("db").get<std::string>();
+    cfg.mysql.server = mysql_doc.at("server").get<std::string>();
+    cfg.mysql.user = mysql_doc.at("user").get<std::string>();
+    cfg.mysql.password = mysql_doc.at("password").get<std::string>();
+    cfg.mysql.ssl_mode = mysql_doc.value<std::string>("ssl_mode", "PREFERRED");
 
-    cfg.search.bucket_count = doc.at("search").at("bucket_count").get<uint32_t>();
-    cfg.search.bin_delta_m = doc.at("search").at("bin_delta_m").get<double>();
+    auto search_doc = doc["search"];
+    cfg.search.bucket_count = search_doc.value<uint32_t>("bucket_count", 1000);
+    cfg.search.bin_delta_m = search_doc.value<double>("bin_delta_m", 200.0);
 
-    cfg.range_days = doc.at("range_days").get<uint32_t>();
-    cfg.period_s = doc.at("period_s").get<uint32_t>();
+    cfg.range_days = doc.value<uint32_t>("range_days", 14);
+    cfg.period_s = doc.value<uint32_t>("period_s", 30);
     cfg.temp_dir = doc.at("temp_dir").get<std::string>();
-    cfg.row_buffer_size = doc.at("row_buffer_size").get<uint32_t>();
+    cfg.row_buffer_size = doc.value<uint32_t>("row_buffer_size", 40000000);
     return cfg;
 }
 

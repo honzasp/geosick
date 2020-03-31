@@ -172,7 +172,7 @@ void GeoSearch::find_users_within_circle(int32_t lat, int32_t lon,
 }
 
 void GeoSearch::close() {
-    std::cout << "Search stats:" << std::endl
+    std::cout << "Search structure stats:" << std::endl
         << "  queries: " << m_query_count.load() << std::endl
         << "  bin hits: " << m_bin_hit_count.load() << std::endl
         << "  point hits: " << m_point_hit_count.load() << std::endl

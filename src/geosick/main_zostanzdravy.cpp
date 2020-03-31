@@ -82,9 +82,15 @@ static void main(int argc, char** argv) {
         read_proc.process(*row_reader);
     }
 
-    auto end_time = UtcTime(DurationS(read_proc.get_max_timestamp()));
-    auto begin_time = end_time - DurationS(24*60*60 * cfg.range_days);
-    auto period = DurationS(cfg.period_s);
+    int32_t mysql_time = mysql.read_now_timestamp();
+    int32_t end_time = mysql_time;
+    int32_t begin_time = end_time - 24*60*60 * (int32_t)cfg.range_days;
+    int32_t period = (int32_t)cfg.period_s;
+    std::cout << "Sampling:" << std::endl
+        << "  mysql timestamp: " << mysql_time << std::endl
+        << "  begin timestamp: " << begin_time << std::endl
+        << "  end timestamp: " << end_time << std::endl
+        << "  period: " << period << std::endl;
     Sampler sampler(begin_time, end_time, period);
 
     std::cout << "Building the search structure..." << std::endl;

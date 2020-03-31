@@ -21,7 +21,7 @@ NotifyProcess::NotifyProcess(const Sampler* sampler,
 static void row_to_json(JsonWriter& w, const GeoRow& row) {
     w.StartObject();
     w.Key("user_id"); w.Uint(row.user_id);
-    w.Key("timestamp_utc_s"); w.Uint(row.timestamp_utc_s);
+    w.Key("timestamp_utc_s"); w.Int(row.timestamp_utc_s);
     w.Key("lat_e7"); w.Int(row.lat);
     w.Key("lon_e7"); w.Int(row.lon);
     w.Key("accuracy_m"); w.Uint(row.accuracy_m);
@@ -35,17 +35,12 @@ static void row_to_json(JsonWriter& w, const GeoRow& row) {
     w.EndObject();
 }
 
-static void timestamp_to_json(JsonWriter& w, UtcTime time) {
-    w.Int(time.time_since_epoch().count());
-}
-
 static void sample_to_json(JsonWriter& w,
     const Sampler& sampler, const GeoSample& sample)
 {
     w.StartObject();
     w.Key("time_index"); w.Int(sample.time_index);
-    w.Key("timestamp_utc_s"); timestamp_to_json(w,
-        sampler.time_index_to_timestamp(sample.time_index));
+    w.Key("timestamp_utc_s"); w.Int(sampler.time_index_to_timestamp(sample.time_index));
     w.Key("user_id"); w.Uint(sample.user_id);
     w.Key("lat_e7"); w.Int(sample.lat);
     w.Key("lon_e7"); w.Int(sample.lon);
@@ -58,8 +53,7 @@ static void step_to_json(JsonWriter& w,
 {
     w.StartObject();
     w.Key("time_index"); w.Int(step.time_index);
-    w.Key("timestamp_utc_s"); timestamp_to_json(w,
-        sampler.time_index_to_timestamp(step.time_index));
+    w.Key("timestamp_utc_s"); w.Int(sampler.time_index_to_timestamp(step.time_index));
     w.Key("infect_rate"); w.Double(step.infect_rate);
     w.Key("distance_m"); w.Double(step.distance_m);
     w.EndObject();

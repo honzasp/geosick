@@ -16,33 +16,30 @@ struct GeoSample {
     // TODO: velocity_n, velocity_e
 };
 
-using DurationS = std::chrono::duration<int32_t, std::ratio<1>>;
-using UtcTime = std::chrono::time_point<std::chrono::steady_clock, DurationS>;
-
 class Sampler {
 private:
     // Maximum allowable time duration for interpolation between two points
-    static constexpr DurationS MAX_DELTA_TIME = std::chrono::minutes(5);
+    static constexpr int32_t MAX_DELTA_TIME = 5*60;
     // Maximum allowable distance for interpolation in meters
-    static constexpr unsigned MAX_DELTA_DISTANCE_M = 100;
-    static constexpr unsigned MAX_DELTA_DISTANCE_M_POW2 = MAX_DELTA_DISTANCE_M * MAX_DELTA_DISTANCE_M;
+    static constexpr double MAX_DELTA_DISTANCE_M = 100;
+    static constexpr double MAX_DELTA_DISTANCE_M_POW2 = MAX_DELTA_DISTANCE_M * MAX_DELTA_DISTANCE_M;
 
-    UtcTime m_begin_time;
-    UtcTime m_end_time;
-    DurationS m_end_offset;
-    DurationS m_period;
+    int32_t m_begin_time;
+    int32_t m_end_time;
+    int32_t m_end_offset;
+    int32_t m_period;
 
 public:
-    explicit Sampler(UtcTime begin_time, UtcTime end_time, DurationS period_s);
+    explicit Sampler(int32_t begin_time, int32_t end_time, int32_t period_s);
 
-    UtcTime time_index_to_timestamp(int32_t time_index) const;
+    int32_t time_index_to_timestamp(int32_t time_index) const;
 
     void
     sample(ArrayView<const GeoRow> rows, std::vector<GeoSample>& out_samples) const;
 
 private:
     GeoSample get_weighted_sample(const GeoRow& row, const GeoRow& next_row,
-        DurationS row_offset, DurationS next_row_offset, DurationS offset) const;
+        int32_t row_offset, int32_t next_row_offset, int32_t offset) const;
 };
 
 }

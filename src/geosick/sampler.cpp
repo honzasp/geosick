@@ -30,14 +30,14 @@ T integer_mod(T x, T m) {
 } // END OF ANONYMOUS NAMESPACE
 
 
-Sampler::Sampler(UtcTime begin_time, UtcTime end_time, DurationS period)
+Sampler::Sampler(int32_t begin_time, int32_t end_time, int32_t period)
  : m_begin_time(begin_time), m_end_time(end_time), m_end_offset(end_time - begin_time),
    m_period(period)
 {
     assert(m_begin_time <= m_end_time);
 }
 
-UtcTime Sampler::time_index_to_timestamp(int32_t time_index) const {
+int32_t Sampler::time_index_to_timestamp(int32_t time_index) const {
     return m_begin_time + m_period * time_index;
 }
 
@@ -56,10 +56,11 @@ Sampler::sample(ArrayView<const GeoRow> rows, std::vector<GeoSample>& out_sample
         const auto& next_row = rows.at(i);
         assert(row.user_id == next_row.user_id);
 
-        const auto row_timestamp = UtcTime(DurationS(row.timestamp_utc_s));
-        const auto next_row_timestamp = UtcTime(DurationS(next_row.timestamp_utc_s));
-        const auto time_delta = next_row_timestamp - row_timestamp;
-        const auto distance_m_pow2 = pow2_geo_distance_fast_m(row.lat, row.lon, next_row.lat, next_row.lon);
+        int32_t row_timestamp = row.timestamp_utc_s;
+        int32_t next_row_timestamp = next_row.timestamp_utc_s;
+        int32_t time_delta = next_row_timestamp - row_timestamp;
+        double distance_m_pow2 = pow2_geo_distance_fast_m(
+            row.lat, row.lon, next_row.lat, next_row.lon);
 
         if (row_timestamp > m_end_time) {
             break;
@@ -71,12 +72,12 @@ Sampler::sample(ArrayView<const GeoRow> rows, std::vector<GeoSample>& out_sample
             continue;
         }
 
-        auto row_offset = row_timestamp - m_begin_time;
-        auto next_row_offset = next_row_timestamp - m_begin_time;
-        assert(next_row_offset > DurationS::zero());
+        int32_t row_offset = row_timestamp - m_begin_time;
+        int32_t next_row_offset = next_row_timestamp - m_begin_time;
+        assert(next_row_offset > 0);
 
-        auto offset = DurationS(round_up(row_offset.count(), m_period.count()));
-        if (offset < DurationS::zero()) {
+        int32_t offset = round_up(row_offset, m_period);
+        if (offset < 0) {
             offset = integer_mod(offset, m_period);
         }
 
@@ -90,15 +91,15 @@ Sampler::sample(ArrayView<const GeoRow> rows, std::vector<GeoSample>& out_sample
 
 GeoSample
 Sampler::get_weighted_sample(const GeoRow& row, const GeoRow& next_row,
-        DurationS row_offset, DurationS next_row_offset, DurationS offset) const
+        int32_t row_offset, int32_t next_row_offset, int32_t offset) const
 {
-    assert(offset >= DurationS::zero());
-    assert(offset % m_period == DurationS::zero());
+    assert(offset >= 0);
+    assert(offset % m_period == 0);
     assert(row_offset <= offset);
     assert(offset <= next_row_offset);
 
     auto spread = next_row_offset - row_offset;
-    double w1 = 1 - double((offset - row_offset).count()) / spread.count();
+    double w1 = 1 - double(offset - row_offset) / spread;
     double w2 = 1 - w1;
     assert(0 <= w1 && w1 <= 1);
     assert(0 <= w2 && w2 <= 1);

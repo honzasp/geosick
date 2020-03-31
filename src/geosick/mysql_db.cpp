@@ -107,13 +107,22 @@ MysqlDb::UserIds MysqlDb::read_user_ids() {
     return user_ids;
 }
 
+int32_t MysqlDb::read_now_timestamp() {
+    mysqlpp::Query query = m_conn.query(R"(
+        SELECT UNIX_TIMESTAMP()
+    )");
+    auto result = query.store();
+    int32_t timestamp = read_i32(result.at(0).at(0));
+    return timestamp;
+}
+
 std::optional<GeoRow> MysqlReader::read() {
     auto row = m_result.fetch_row();
     if (!row) { return {}; }
 
     GeoRow res;
     res.user_id = read_u32(row.at(0));
-    res.timestamp_utc_s = read_u32(row.at(1));
+    res.timestamp_utc_s = read_i32(row.at(1));
     res.lat = read_i32(row.at(2));
     res.lon = read_i32(row.at(3));
     res.accuracy_m = !row.at(4).is_null() ? read_u16(row.at(4)) : 50;

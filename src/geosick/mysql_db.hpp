@@ -19,6 +19,8 @@ public:
       std::unordered_set<uint32_t> query;
   };
   UserIds read_user_ids();
+
+  int32_t read_now_timestamp();
 };
 
 class MysqlReader final: public GeoRowReader {

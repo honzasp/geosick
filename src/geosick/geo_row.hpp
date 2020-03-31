@@ -5,7 +5,7 @@ namespace geosick {
 
 struct GeoRow {
     uint32_t user_id;
-    uint32_t timestamp_utc_s;
+    int32_t timestamp_utc_s;
     int32_t lat;
     int32_t lon;
     uint16_t accuracy_m;

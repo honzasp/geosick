@@ -17,8 +17,8 @@ class ReadProcess {
     std::vector<GeoRow> m_sick_rows;
     std::vector<std::vector<std::filesystem::path>> m_temp_files;
     uint32_t m_temp_file_counter = 0;
-    uint32_t m_min_timestamp = UINT32_MAX;
-    uint32_t m_max_timestamp = 0;
+    int32_t m_min_timestamp = INT32_MAX;
+    int32_t m_max_timestamp = INT32_MIN;
     uint64_t m_query_row_count = 0;
 
     void flush_buffer(std::vector<GeoRow> buffer);
@@ -35,8 +35,8 @@ public:
     std::unique_ptr<GeoRowReader> read_query_rows();
     std::vector<GeoRow> read_sick_rows();
 
-    uint32_t get_min_timestamp() const { return m_min_timestamp; }
-    uint32_t get_max_timestamp() const { return m_max_timestamp; }
+    int32_t get_min_timestamp() const { return m_min_timestamp; }
+    int32_t get_max_timestamp() const { return m_max_timestamp; }
 };
 
 }

@@ -2,6 +2,7 @@
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include "geosick/file_writer.hpp"
+#include "geosick/geo_distance.hpp"
 #include "geosick/geo_search.hpp"
 #include "geosick/mysql_db.hpp"
 #include "geosick/read_process.hpp"

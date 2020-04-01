@@ -7,11 +7,6 @@
 
 namespace geosick {
 
-static const double DEG_E7_TO_M = 0.011119508;
-static const double M_TO_DEG_E7 = 89.93204;
-static const double DEG_E7_TO_RAD = 1.745329251994e-9;
-static const double MEAN_LAT_E7 = 50e7;
-
 GeoSearch::LatLonBins GeoSearch::get_bins(
     int32_t lat, int32_t lon, uint32_t radius) const
 {

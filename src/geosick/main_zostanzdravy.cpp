@@ -98,7 +98,8 @@ static void main(int argc, char** argv) {
     GeoSearch search(cfg, make_view(sick_map.samples));
 
     std::cout << "Searching for matches..." << std::endl;
-    NotifyProcess notify_proc(&sampler, temp_dir / "matches.json");
+    NotifyProcess notify_proc(&sampler,
+        temp_dir / "matches.json", temp_dir / "selected_matches.json.bz2");
     SearchProcess search_proc(&cfg, &sampler, &search, &sick_map, &notify_proc);
     auto reader = read_proc.read_query_rows();
     while (auto row = reader->read()) {

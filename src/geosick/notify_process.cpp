@@ -7,13 +7,46 @@ namespace geosick {
 
 using JsonWriter = rapidjson::Writer<rapidjson::StringBuffer>;
 
+static void check_bz(int bzerror) {
+    if (bzerror != BZ_OK) {
+        throw std::runtime_error("Error from libbzip2: " + std::to_string(bzerror));
+    }
+}
+
 NotifyProcess::NotifyProcess(const Sampler* sampler,
-    const std::filesystem::path& matches_path)
+    const std::filesystem::path& matches_path,
+    const std::filesystem::path& selected_matches_path)
 {
     m_sampler = sampler;
     m_matches_output.open(matches_path);
     if (!m_matches_output) {
-        throw std::runtime_error("Could not open file: " + matches_path.string());
+        throw std::runtime_error("Could not open file for writing: " +
+            matches_path.string());
+    }
+
+    m_selected_matches_file = std::fopen(selected_matches_path.c_str(), "wb");
+    if (!m_selected_matches_file) {
+        throw std::runtime_error("Could not open file for writing: " +
+            selected_matches_path.string());
+    }
+
+    int bzerror = BZ_OK;
+    m_selected_matches_bzfile = BZ2_bzWriteOpen(&bzerror, m_selected_matches_file,
+        9, 0, 30);
+    check_bz(bzerror);
+    assert(m_selected_matches_bzfile != nullptr);
+}
+
+NotifyProcess::~NotifyProcess() {
+    if (m_selected_matches_bzfile) {
+        int bzerror = BZ_OK;
+        BZ2_bzWriteClose(&bzerror, m_selected_matches_bzfile, 0, nullptr, nullptr);
+        m_selected_matches_bzfile = nullptr;
+    }
+
+    if (m_selected_matches_file) {
+        std::fclose(m_selected_matches_file);
+        m_selected_matches_file = nullptr;
     }
 }
 
@@ -109,7 +142,16 @@ static void match_to_json(JsonWriter& w, const Sampler& sampler,
 void NotifyProcess::notify(const MatchInput& mi, const MatchOutput& mo) {
     rapidjson::Writer<rapidjson::StringBuffer> w(m_match_buffer);
     match_to_json(w, *m_sampler, mi, mo);
-    m_matches_output << m_match_buffer.GetString() << std::endl;
+    m_match_buffer.Put('\n');
+    m_matches_output << m_match_buffer.GetString();
+
+    if (std::bernoulli_distribution(0.1)(m_rng)) {
+        int bzerror = BZ_OK;
+        BZ2_bzWrite(&bzerror, m_selected_matches_bzfile,
+            (void*)m_match_buffer.GetString(), (int)m_match_buffer.GetSize());
+        check_bz(bzerror);
+    }
+
     m_match_buffer.Clear();
     m_match_count += 1;
 }
@@ -117,6 +159,18 @@ void NotifyProcess::notify(const MatchInput& mi, const MatchOutput& mo) {
 void NotifyProcess::close() {
     std::cout << "Reported " << m_match_count << " matches" << std::endl;
     m_matches_output.close();
+
+    if (m_selected_matches_bzfile) {
+        int bzerror = BZ_OK;
+        BZ2_bzWriteClose(&bzerror, m_selected_matches_bzfile, 0, nullptr, nullptr);
+        check_bz(bzerror);
+        m_selected_matches_bzfile = nullptr;
+    }
+
+    if (m_selected_matches_file) {
+        std::fclose(m_selected_matches_file);
+        m_selected_matches_file = nullptr;
+    }
 }
 
 }

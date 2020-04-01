@@ -1,3 +1,4 @@
+#include <cassert>
 #include <cmath>
 #include <iostream>
 #include "geosick/geo_distance.hpp"
@@ -45,6 +46,7 @@ MatchOutput evaluate_match(const Config& cfg, const MatchInput& input) {
 
     size_t query_i = 0;
     size_t sick_i = 0;
+    MatchOutput output;
     while (query_i < input.query_samples.size() && sick_i < input.sick_samples.size()) {
         const auto& query_sample = input.query_samples.at(query_i);
         const auto& sick_sample = input.sick_samples.at(sick_i);
@@ -57,10 +59,14 @@ MatchOutput evaluate_match(const Config& cfg, const MatchInput& input) {
         }
 
         MatchStep step;
+        step.time_index = query_sample.time_index;
         step.distance_m = std::sqrt(pow2_geo_distance_fast_m(
             query_sample.lat, query_sample.lon,
             sick_sample.lat, sick_sample.lon));
         step.infect_rate = eval_infect_rate(query_sample, sick_sample, step.distance_m);
+        assert(std::isfinite(step.infect_rate));
+        output.steps.push_back(step);
+
         if (step.infect_rate > 0.0) {
             compl_score_log += std::log1p(
                 -std::min(0.9, double(cfg.period_s)*step.infect_rate));
@@ -69,7 +75,6 @@ MatchOutput evaluate_match(const Config& cfg, const MatchInput& input) {
             0.5*double(query_sample.accuracy_m) + 0.5*double(sick_sample.accuracy_m));
     }
 
-    MatchOutput output;
     output.score = 0.0 - std::expm1(compl_score_log);
     output.min_distance_m = min_distance;
     return output;

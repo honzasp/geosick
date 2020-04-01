@@ -132,6 +132,8 @@ body {
         <button id="pause" title="Pozastavit animaci">&#x23f8;</button>
         <button id="step-prev" title="Krok zpět">&#x23ea;</button>
         <button id="step-next" title="Krok vpřed">&#x23e9;</button>
+        <button id="seek-prev" title="Hledat zpět">&#x23ee;</button>
+        <button id="seek-next" title="Hledat vpřed">&#x23ed;</button>
       </div>
       <input id="slider" type="range" min="0" max="0" step="1">
     </div>
@@ -159,6 +161,8 @@ var inputElems = {
   pause: document.getElementById("pause"),
   stepPrev: document.getElementById("step-prev"),
   stepNext: document.getElementById("step-next"),
+  seekPrev: document.getElementById("seek-prev"),
+  seekNext: document.getElementById("seek-next"),
 };
 var sidebarElems = {
   queryId: document.getElementById("query-id"),
@@ -178,7 +182,6 @@ var matches = [];
 
 function handleFile() {
   if (fileElem.files.length == 0) {
-    setResponse(null);
     return;
   }
 
@@ -400,6 +403,26 @@ inputElems.stepNext.addEventListener("click", function() {
   setTimeIndex(selectedMatch, selectedTimeIndex + 1);
 }, false);
 
+function seekStep(dir) {
+  if (selectedMatch === null) { return; }
+  var timeIndex = null;
+  for (var step of selectedMatch.steps) {
+    if (step.infect_rate > 0 && dir*step.time_index > dir*selectedTimeIndex) {
+      if (timeIndex === null || dir*step.time_index < dir*timeIndex) {
+        timeIndex = step.time_index;
+      }
+    }
+  }
+  if (timeIndex !== null) {
+    setTimeIndex(selectedMatch, timeIndex);
+  }
+}
+
+inputElems.seekPrev.addEventListener("click", function() { seekStep(-1); }, false);
+inputElems.seekNext.addEventListener("click", function() { seekStep(+1); }, false);
+
+
+
 
 /// animating the steps
 
@@ -448,10 +471,10 @@ function setSidebarStep(timestamp, querySample, sickSample, step) {
     ? new Date(timestamp*1000).toLocaleString("cs-CZ",
       {hour12: false, dateStyle: "medium", timeStyle: "long"})
     : "n/a";
-  sidebarElems.risk.innerText = step
-    ? step.infect_rate.toFixed(3) : "n/a";
-  sidebarElems.distance.innerText = step
-    ? step.distance.toFixed(1) + " m" : "n/a";
+  sidebarElems.risk.innerText = step && step.infect_rate !== null
+    ? step.infect_rate.toFixed(5) : "n/a";
+  sidebarElems.distance.innerText = step && step.distance_m !== null
+    ? step.distance_m.toFixed(1) + " m" : "n/a";
   sidebarElems.queryPos.innerText = querySample
     ? formatLatLngAccuracy(querySample.lat_e7, querySample.lon_e7,
       querySample.accuracy_m) : "n/a";

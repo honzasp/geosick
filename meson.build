@@ -14,6 +14,7 @@ mysqlpp_dep = declare_dependency(
 stdcppfs_dep = cpp.find_library('stdc++fs')
 boost_dep = dependency('boost')
 pthread_dep = cpp.find_library('pthread')
+bzlib_dep = cpp.find_library('bz2')
 
 
 sources = files(
@@ -31,7 +32,7 @@ includes = include_directories(
   'src',
   'extern/include',
 )
-deps = [mysql_dep, mysqlpp_dep, stdcppfs_dep, boost_dep, pthread_dep]
+deps = [mysql_dep, mysqlpp_dep, stdcppfs_dep, boost_dep, pthread_dep, bzlib_dep]
 
 executable('zostanzdravy', sources,
   include_directories: includes,

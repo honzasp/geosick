@@ -1,6 +1,7 @@
+build/
+data/
 .*.swp
 *~
-build
 .history
 *.code-workspace
 *__pycache__*

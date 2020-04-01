@@ -1,9 +1,9 @@
 FROM ubuntu:eoan AS zostanzdravy-base
 RUN apt-get update && \
-    apt-get -y install libmysql++3v5
+    apt-get -y install libmysql++3v5 libbz2-1.0
 
 FROM zostanzdravy-base AS zostanzdravy-build
-RUN apt-get -y install libmysql++-dev libboost-dev \
+RUN apt-get -y install libmysql++-dev libboost-dev libbz2-dev \
     meson ninja-build g++ pkg-config
 WORKDIR /zostanzdravy
 COPY src src

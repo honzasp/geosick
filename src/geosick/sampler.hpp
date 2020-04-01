@@ -18,12 +18,6 @@ struct GeoSample {
 
 class Sampler {
 private:
-    // Maximum allowable time duration for interpolation between two points
-    static constexpr int32_t MAX_DELTA_TIME = 5*60;
-    // Maximum allowable distance for interpolation in meters
-    static constexpr double MAX_DELTA_DISTANCE_M = 100;
-    static constexpr double MAX_DELTA_DISTANCE_M_POW2 = MAX_DELTA_DISTANCE_M * MAX_DELTA_DISTANCE_M;
-
     int32_t m_begin_time;
     int32_t m_end_time;
     int32_t m_end_offset;

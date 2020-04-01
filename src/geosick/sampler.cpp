@@ -4,6 +4,17 @@
 #include <cassert>
 
 namespace geosick {
+
+// Maximum allowable time duration for interpolation between two points
+static constexpr int32_t MAX_DELTA_TIME = 5*60;
+
+// Maximum allowable distance for interpolation in meters
+static constexpr double MAX_DELTA_DISTANCE_M = 100;
+static constexpr double MAX_DELTA_DISTANCE_M_POW2 = MAX_DELTA_DISTANCE_M * MAX_DELTA_DISTANCE_M;
+
+// Minimum allowable accuracy in meters.
+static constexpr uint16_t MIN_ACCURACY_M = 4;
+
 namespace {
 
 int round_up(int num_to_round, int multiple)
@@ -74,7 +85,7 @@ Sampler::sample(ArrayView<const GeoRow> rows, std::vector<GeoSample>& out_sample
 
         int32_t row_offset = row_timestamp - m_begin_time;
         int32_t next_row_offset = next_row_timestamp - m_begin_time;
-        assert(next_row_offset > 0);
+        assert(next_row_offset >= 0);
 
         int32_t offset = round_up(row_offset, m_period);
         if (offset < 0) {
@@ -109,7 +120,7 @@ Sampler::get_weighted_sample(const GeoRow& row, const GeoRow& next_row,
         .user_id = row.user_id,
         .lat = int32_t(w1*row.lat + w2*next_row.lat),
         .lon = int32_t(w1*row.lon + w2*next_row.lon),
-        .accuracy_m = uint16_t(w1*row.accuracy_m + w2*next_row.accuracy_m)
+        .accuracy_m = std::max(MIN_ACCURACY_M, uint16_t(w1*row.accuracy_m + w2*next_row.accuracy_m)),
     };
 }
 

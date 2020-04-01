@@ -417,17 +417,20 @@ function seekStep(dir) {
   }
   if (timeIndex !== null) {
     setTimeIndex(selectedMatch, timeIndex);
+    centerToSick();
   }
 }
 
 inputElems.seekPrev.addEventListener("click", function() { seekStep(-1); }, false);
 inputElems.seekNext.addEventListener("click", function() { seekStep(+1); }, false);
 
-inputElems.centerUsers.addEventListener("click", function() {
+function centerToSick() {
   if (sickCircle !== null) {
     map.setView(sickCircle.getLatLng(), Math.max(map.getZoom(), 16));
   }
-}, false);
+}
+
+inputElems.centerUsers.addEventListener("click", function() { centerToSick(); }, false);
 
 
 /// animating the steps

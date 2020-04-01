@@ -24,23 +24,28 @@ namespace {
     };
 }
 
-static Config config_from_json(const nlohmann::json& doc) {
+static Config config_from_json(nlohmann::json& doc) {
+    auto p = [&](const char* ptr) { return nlohmann::json::json_pointer(ptr); };
+
     Config cfg;
-    auto mysql_doc = doc.at("mysql");
-    cfg.mysql.db = mysql_doc.at("db").get<std::string>();
-    cfg.mysql.server = mysql_doc.at("server").get<std::string>();
-    cfg.mysql.user = mysql_doc.at("user").get<std::string>();
-    cfg.mysql.password = mysql_doc.at("password").get<std::string>();
-    cfg.mysql.ssl_mode = mysql_doc.value<std::string>("ssl_mode", "PREFERRED");
+    cfg.mysql.db = doc.at(p("/mysql/db")).get<std::string>();
+    cfg.mysql.server = doc.at(p("/mysql/server")).get<std::string>();
+    cfg.mysql.user = doc.at(p("/mysql/user")).get<std::string>();
+    cfg.mysql.password = doc.at(p("/mysql/password")).get<std::string>();
+    cfg.mysql.ssl_mode = doc.value<std::string>(p("/mysql/ssl_mode"), "PREFERRED");
 
-    auto search_doc = doc["search"];
-    cfg.search.bucket_count = search_doc.value<uint32_t>("bucket_count", 1000);
-    cfg.search.bin_delta_m = search_doc.value<double>("bin_delta_m", 200.0);
+    cfg.search.bucket_count = doc.value<uint32_t>(p("/search/bucket_count"), 1000);
+    cfg.search.bin_delta_m = doc.value<double>(p("/search/bin_delta_m"), 200.0);
 
-    cfg.range_days = doc.value<uint32_t>("range_days", 14);
-    cfg.period_s = doc.value<uint32_t>("period_s", 30);
-    cfg.temp_dir = doc.at("temp_dir").get<std::string>();
-    cfg.row_buffer_size = doc.value<uint32_t>("row_buffer_size", 40000000);
+    cfg.notify.use_json = doc.value<bool>(p("/notify/use_json"), true);
+    cfg.notify.json_min_score = doc.value<double>(p("/notify/json_min_score"), 0.001);
+    cfg.notify.use_db = doc.value<bool>(p("/notify/use_db"), false);
+    cfg.notify.db_min_score = doc.value<double>(p("/notify/db_min_score"), 0.1);
+
+    cfg.range_days = doc.value<uint32_t>(p("/range_days"), 14);
+    cfg.period_s = doc.value<uint32_t>(p("/period_s"), 30);
+    cfg.temp_dir = doc.at(p("/temp_dir")).get<std::string>();
+    cfg.row_buffer_size = doc.value<uint32_t>(p("/row_buffer_size"), 40000000);
     return cfg;
 }
 
@@ -118,7 +123,7 @@ static void main(int argc, char** argv) {
 
     std::cout << "Searching for matches..." << std::endl;
     Stopwatch search_sw;
-    NotifyProcess notify_proc(&sampler,
+    NotifyProcess notify_proc(&cfg, &sampler,
         temp_dir / "matches.json", temp_dir / "selected_matches.json.bz2");
     SearchProcess search_proc(&cfg, &sampler, &search, &sick_map, &notify_proc);
     auto reader = read_proc.read_query_rows();

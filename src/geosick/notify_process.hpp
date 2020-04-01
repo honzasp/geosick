@@ -11,15 +11,21 @@ namespace geosick {
 class Sampler;
 
 class NotifyProcess {
+    const Config* m_cfg;
     const Sampler* m_sampler;
-    std::ofstream m_matches_output;
-    FILE* m_selected_matches_file { nullptr };
-    BZFILE* m_selected_matches_bzfile { nullptr };
-    std::mt19937 m_rng;
-    rapidjson::StringBuffer m_match_buffer;
     uint64_t m_match_count { 0 };
+
+    std::ofstream m_json_output;
+    FILE* m_selected_json_file { nullptr };
+    BZFILE* m_selected_json_bzfile { nullptr };
+    std::mt19937 m_rng;
+    rapidjson::StringBuffer m_json_buffer;
+    uint64_t m_json_count { 0 };
+    uint64_t m_selected_json_count { 0 };
+
+    void notify_json(const MatchInput& mi, const MatchOutput& mo);
 public:
-    NotifyProcess(const Sampler* sampler,
+    NotifyProcess(const Config* cfg, const Sampler* sampler,
       const std::filesystem::path& matches_path,
       const std::filesystem::path& selected_matches_path);
     ~NotifyProcess();

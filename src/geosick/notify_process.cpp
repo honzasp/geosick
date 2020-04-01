@@ -13,40 +13,44 @@ static void check_bz(int bzerror) {
     }
 }
 
-NotifyProcess::NotifyProcess(const Sampler* sampler,
+NotifyProcess::NotifyProcess(const Config* cfg, const Sampler* sampler,
     const std::filesystem::path& matches_path,
     const std::filesystem::path& selected_matches_path)
 {
+    m_cfg = cfg;
     m_sampler = sampler;
-    m_matches_output.open(matches_path);
-    if (!m_matches_output) {
-        throw std::runtime_error("Could not open file for writing: " +
-            matches_path.string());
-    }
 
-    m_selected_matches_file = std::fopen(selected_matches_path.c_str(), "wb");
-    if (!m_selected_matches_file) {
-        throw std::runtime_error("Could not open file for writing: " +
-            selected_matches_path.string());
-    }
+    if (m_cfg->notify.use_json) {
+        m_json_output.open(matches_path);
+        if (!m_json_output) {
+            throw std::runtime_error("Could not open file for writing: " +
+                matches_path.string());
+        }
 
-    int bzerror = BZ_OK;
-    m_selected_matches_bzfile = BZ2_bzWriteOpen(&bzerror, m_selected_matches_file,
-        9, 0, 30);
-    check_bz(bzerror);
-    assert(m_selected_matches_bzfile != nullptr);
+        m_selected_json_file = std::fopen(selected_matches_path.c_str(), "wb");
+        if (!m_selected_json_file) {
+            throw std::runtime_error("Could not open file for writing: " +
+                selected_matches_path.string());
+        }
+
+        int bzerror = BZ_OK;
+        m_selected_json_bzfile = BZ2_bzWriteOpen(&bzerror, m_selected_json_file,
+            9, 0, 30);
+        check_bz(bzerror);
+        assert(m_selected_json_bzfile != nullptr);
+    }
 }
 
 NotifyProcess::~NotifyProcess() {
-    if (m_selected_matches_bzfile) {
+    if (m_selected_json_bzfile) {
         int bzerror = BZ_OK;
-        BZ2_bzWriteClose(&bzerror, m_selected_matches_bzfile, 0, nullptr, nullptr);
-        m_selected_matches_bzfile = nullptr;
+        BZ2_bzWriteClose(&bzerror, m_selected_json_bzfile, 0, nullptr, nullptr);
+        m_selected_json_bzfile = nullptr;
     }
 
-    if (m_selected_matches_file) {
-        std::fclose(m_selected_matches_file);
-        m_selected_matches_file = nullptr;
+    if (m_selected_json_file) {
+        std::fclose(m_selected_json_file);
+        m_selected_json_file = nullptr;
     }
 }
 
@@ -139,41 +143,55 @@ static void match_to_json(JsonWriter& w, const Sampler& sampler,
     w.EndObject();
 }
 
-void NotifyProcess::notify(const MatchInput& mi, const MatchOutput& mo) {
-    rapidjson::Writer<rapidjson::StringBuffer> w(m_match_buffer);
+void NotifyProcess::notify_json(const MatchInput& mi, const MatchOutput& mo) {
+    rapidjson::Writer<rapidjson::StringBuffer> w(m_json_buffer);
     match_to_json(w, *m_sampler, mi, mo, false);
-    m_matches_output << m_match_buffer.GetString() << std::endl;
-    m_match_buffer.Clear();
+    m_json_output << m_json_buffer.GetString() << std::endl;
+    m_json_buffer.Clear();
 
     if (std::bernoulli_distribution(0.1)(m_rng)) {
-        rapidjson::Writer<rapidjson::StringBuffer> w_anon(m_match_buffer);
+        rapidjson::Writer<rapidjson::StringBuffer> w_anon(m_json_buffer);
         match_to_json(w_anon, *m_sampler, mi, mo, true);
-        m_match_buffer.Put('\n');
+        m_json_buffer.Put('\n');
 
         int bzerror = BZ_OK;
-        BZ2_bzWrite(&bzerror, m_selected_matches_bzfile,
-            (void*)m_match_buffer.GetString(), (int)m_match_buffer.GetSize());
+        BZ2_bzWrite(&bzerror, m_selected_json_bzfile,
+            (void*)m_json_buffer.GetString(), (int)m_json_buffer.GetSize());
         check_bz(bzerror);
-        m_match_buffer.Clear();
+        m_json_buffer.Clear();
+        m_selected_json_count += 1;
     }
 
+    m_json_count += 1;
+}
+
+void NotifyProcess::notify(const MatchInput& mi, const MatchOutput& mo) {
+    if (m_cfg->notify.use_json && mo.score >= m_cfg->notify.json_min_score) {
+        this->notify_json(mi, mo);
+    }
     m_match_count += 1;
 }
 
 void NotifyProcess::close() {
-    std::cout << "Reported " << m_match_count << " matches" << std::endl;
-    m_matches_output.close();
+    std::cout << "Found " << m_match_count << " matches" << std::endl
+        << "  written to matches.json: " << m_json_count << std::endl
+        << "  written to selected_matches.json.bz2: " 
+            << m_selected_json_count << std::endl;
 
-    if (m_selected_matches_bzfile) {
-        int bzerror = BZ_OK;
-        BZ2_bzWriteClose(&bzerror, m_selected_matches_bzfile, 0, nullptr, nullptr);
-        check_bz(bzerror);
-        m_selected_matches_bzfile = nullptr;
+    if (m_json_output) {
+        m_json_output.close();
     }
 
-    if (m_selected_matches_file) {
-        std::fclose(m_selected_matches_file);
-        m_selected_matches_file = nullptr;
+    if (m_selected_json_bzfile) {
+        int bzerror = BZ_OK;
+        BZ2_bzWriteClose(&bzerror, m_selected_json_bzfile, 0, nullptr, nullptr);
+        check_bz(bzerror);
+        m_selected_json_bzfile = nullptr;
+    }
+
+    if (m_selected_json_file) {
+        std::fclose(m_selected_json_file);
+        m_selected_json_file = nullptr;
     }
 }
 

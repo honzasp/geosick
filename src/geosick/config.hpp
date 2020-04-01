@@ -17,6 +17,13 @@ struct Config {
         double bin_delta_m;
     } search;
 
+    struct Notify {
+        bool use_json;
+        double json_min_score;
+        bool use_db;
+        double db_min_score;
+    } notify;
+
     uint32_t range_days;
     uint32_t period_s;
     std::string temp_dir;

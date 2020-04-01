@@ -40,6 +40,7 @@ static Config config_from_json(nlohmann::json& doc) {
 
     cfg.notify.use_json = doc.value<bool>(p("/notify/use_json"), true);
     cfg.notify.json_min_score = doc.value<double>(p("/notify/json_min_score"), 0.001);
+    cfg.notify.json_select = doc.value<double>(p("/notify/json_select"), 0.1);
     cfg.notify.use_db = doc.value<bool>(p("/notify/use_db"), false);
     cfg.notify.db_min_score = doc.value<double>(p("/notify/db_min_score"), 0.1);
 

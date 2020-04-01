@@ -149,7 +149,7 @@ void NotifyProcess::notify_json(const MatchInput& mi, const MatchOutput& mo) {
     m_json_output << m_json_buffer.GetString() << std::endl;
     m_json_buffer.Clear();
 
-    if (std::bernoulli_distribution(0.1)(m_rng)) {
+    if (std::bernoulli_distribution(m_cfg->notify.json_select)(m_rng)) {
         rapidjson::Writer<rapidjson::StringBuffer> w_anon(m_json_buffer);
         match_to_json(w_anon, *m_sampler, mi, mo, true);
         m_json_buffer.Put('\n');

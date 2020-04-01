@@ -20,6 +20,7 @@ struct Config {
     struct Notify {
         bool use_json;
         double json_min_score;
+        double json_select;
         bool use_db;
         double db_min_score;
     } notify;

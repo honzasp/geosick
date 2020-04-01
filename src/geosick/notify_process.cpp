@@ -51,9 +51,9 @@ NotifyProcess::~NotifyProcess() {
 }
 
 
-static void row_to_json(JsonWriter& w, const GeoRow& row) {
+static void row_to_json(JsonWriter& w, const GeoRow& row, bool anonymize) {
     w.StartObject();
-    w.Key("user_id"); w.Uint(row.user_id);
+    w.Key("user_id"); w.Uint(anonymize ? 0 : row.user_id);
     w.Key("timestamp_utc_s"); w.Int(row.timestamp_utc_s);
     w.Key("lat_e7"); w.Int(row.lat);
     w.Key("lon_e7"); w.Int(row.lon);
@@ -68,13 +68,13 @@ static void row_to_json(JsonWriter& w, const GeoRow& row) {
     w.EndObject();
 }
 
-static void sample_to_json(JsonWriter& w,
-    const Sampler& sampler, const GeoSample& sample)
+static void sample_to_json(JsonWriter& w, const Sampler& sampler,
+    const GeoSample& sample, bool anonymize)
 {
     w.StartObject();
     w.Key("time_index"); w.Int(sample.time_index);
     w.Key("timestamp_utc_s"); w.Int(sampler.time_index_to_timestamp(sample.time_index));
-    w.Key("user_id"); w.Uint(sample.user_id);
+    w.Key("user_id"); w.Uint(anonymize ? 0 : sample.user_id);
     w.Key("lat_e7"); w.Int(sample.lat);
     w.Key("lon_e7"); w.Int(sample.lon);
     w.Key("accuracy_m"); w.Uint(sample.accuracy_m);
@@ -93,37 +93,37 @@ static void step_to_json(JsonWriter& w,
 }
 
 static void match_to_json(JsonWriter& w, const Sampler& sampler,
-    const MatchInput& mi, const MatchOutput& mo)
+    const MatchInput& mi, const MatchOutput& mo, bool anonymize)
 {
     w.StartObject();
-    w.Key("query_user_id"); w.Uint(mi.query_user_id);
-    w.Key("sick_user_id"); w.Uint(mi.sick_user_id);
+    w.Key("query_user_id"); w.Uint(anonymize ? 0 : mi.query_user_id);
+    w.Key("sick_user_id"); w.Uint(anonymize ? 0 : mi.sick_user_id);
 
     w.Key("query_rows");
     w.StartArray();
     for (const auto& query_row: mi.query_rows) {
-        row_to_json(w, query_row);
+        row_to_json(w, query_row, anonymize);
     }
     w.EndArray();
 
     w.Key("sick_rows");
     w.StartArray();
     for (const auto& sick_row: mi.sick_rows) {
-        row_to_json(w, sick_row);
+        row_to_json(w, sick_row, anonymize);
     }
     w.EndArray();
 
     w.Key("query_samples");
     w.StartArray();
     for (const auto& query_sample: mi.query_samples) {
-        sample_to_json(w, sampler, query_sample);
+        sample_to_json(w, sampler, query_sample, anonymize);
     }
     w.EndArray();
 
     w.Key("sick_samples");
     w.StartArray();
     for (const auto& sick_sample: mi.sick_samples) {
-        sample_to_json(w, sampler, sick_sample);
+        sample_to_json(w, sampler, sick_sample, anonymize);
     }
     w.EndArray();
 
@@ -141,18 +141,22 @@ static void match_to_json(JsonWriter& w, const Sampler& sampler,
 
 void NotifyProcess::notify(const MatchInput& mi, const MatchOutput& mo) {
     rapidjson::Writer<rapidjson::StringBuffer> w(m_match_buffer);
-    match_to_json(w, *m_sampler, mi, mo);
-    m_match_buffer.Put('\n');
-    m_matches_output << m_match_buffer.GetString();
+    match_to_json(w, *m_sampler, mi, mo, false);
+    m_matches_output << m_match_buffer.GetString() << std::endl;
+    m_match_buffer.Clear();
 
     if (std::bernoulli_distribution(0.1)(m_rng)) {
+        rapidjson::Writer<rapidjson::StringBuffer> w_anon(m_match_buffer);
+        match_to_json(w_anon, *m_sampler, mi, mo, true);
+        m_match_buffer.Put('\n');
+
         int bzerror = BZ_OK;
         BZ2_bzWrite(&bzerror, m_selected_matches_bzfile,
             (void*)m_match_buffer.GetString(), (int)m_match_buffer.GetSize());
         check_bz(bzerror);
+        m_match_buffer.Clear();
     }
 
-    m_match_buffer.Clear();
     m_match_count += 1;
 }
 

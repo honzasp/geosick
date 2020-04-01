@@ -10,6 +10,20 @@
 
 namespace geosick {
 
+namespace {
+    struct Stopwatch {
+        using Clock = std::chrono::high_resolution_clock;
+        Clock::time_point m_start_time;
+
+        Stopwatch() {
+            m_start_time = Clock::now();
+        }
+        double get_s() const {
+            return std::chrono::duration<double>(Clock::now() - m_start_time).count();
+        }
+    };
+}
+
 static Config config_from_json(const nlohmann::json& doc) {
     Config cfg;
     auto mysql_doc = doc.at("mysql");
@@ -64,6 +78,7 @@ static void main(int argc, char** argv) {
         std::cerr << "Usage: " << argv[0] << " <config-file>" << std::endl;
         throw std::runtime_error("Bad usage");
     }
+    Stopwatch all_sw;
 
     std::cout << "Initializing..." << std::endl;
     nlohmann::json config_doc; {
@@ -74,13 +89,15 @@ static void main(int argc, char** argv) {
     std::filesystem::path temp_dir = cfg.temp_dir;
     MysqlDb mysql(cfg);
 
-    auto user_ids = mysql.read_user_ids();
     std::cout << "Reading rows..." << std::endl;
+    Stopwatch read_sw;
+    auto user_ids = mysql.read_user_ids();
     ReadProcess read_proc(&user_ids.sick, &user_ids.query, temp_dir, cfg.row_buffer_size);
     {
         auto row_reader = mysql.read_rows();
         read_proc.process(*row_reader);
     }
+    std::cout << "  reading took " << read_sw.get_s() << " s" << std::endl;
 
     int32_t mysql_time = mysql.read_now_timestamp();
     int32_t end_time = mysql_time;
@@ -94,10 +111,13 @@ static void main(int argc, char** argv) {
     Sampler sampler(begin_time, end_time, period);
 
     std::cout << "Building the search structure..." << std::endl;
+    Stopwatch build_sw;
     auto sick_map = read_sick_map(sampler, read_proc.read_sick_rows());
     GeoSearch search(cfg, make_view(sick_map.samples));
+    std::cout << "  building took " << build_sw.get_s() << " s" << std::endl;
 
     std::cout << "Searching for matches..." << std::endl;
+    Stopwatch search_sw;
     NotifyProcess notify_proc(&sampler,
         temp_dir / "matches.json", temp_dir / "selected_matches.json.bz2");
     SearchProcess search_proc(&cfg, &sampler, &search, &sick_map, &notify_proc);
@@ -105,11 +125,12 @@ static void main(int argc, char** argv) {
     while (auto row = reader->read()) {
         search_proc.process_query_row(*row);
     }
+    std::cout << "  searching took " << search_sw.get_s() << " s" << std::endl;
     search_proc.close();
     search.close();
     notify_proc.close();
 
-    std::cout << "Done" << std::endl;
+    std::cout << "Done in " << all_sw.get_s() << " s" << std::endl;
 }
 
 }

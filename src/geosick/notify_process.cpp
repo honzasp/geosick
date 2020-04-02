@@ -14,11 +14,13 @@ static void check_bz(int bzerror) {
 }
 
 NotifyProcess::NotifyProcess(const Config* cfg, const Sampler* sampler,
+    MysqlDb* mysql,
     const std::filesystem::path& matches_path,
     const std::filesystem::path& selected_matches_path)
 {
     m_cfg = cfg;
     m_sampler = sampler;
+    m_mysql = mysql;
 
     if (m_cfg->notify.use_json) {
         m_json_output.open(matches_path);
@@ -165,18 +167,32 @@ void NotifyProcess::notify_json(const MatchInput& mi, const MatchOutput& mo) {
     m_json_count += 1;
 }
 
+void NotifyProcess::notify_mysql(const MatchInput& mi, const MatchOutput& mo) {
+    MysqlDb::Match m;
+    m.query_id = mi.query_user_id;
+    m.sick_id = mi.sick_user_id;
+    m.score = mo.score;
+    //m.distance_m = mo.min_distance_m;
+    //m.timestamp = m_sampler->time_index_to_timestamp(mo.max_time_index);
+    m_mysql_matches.push_back(m);
+    m_mysql_count += 1;
+}
+
 void NotifyProcess::notify(const MatchInput& mi, const MatchOutput& mo) {
     if (m_cfg->notify.use_json && mo.score >= m_cfg->notify.json_min_score) {
         this->notify_json(mi, mo);
+    }
+    if (m_cfg->notify.use_mysql && mo.score >= m_cfg->notify.mysql_min_score) {
+        this->notify_mysql(mi, mo);
     }
     m_match_count += 1;
 }
 
 void NotifyProcess::close() {
-    std::cout << "Found " << m_match_count << " matches" << std::endl
-        << "  written to matches.json: " << m_json_count << std::endl
-        << "  written to selected_matches.json.bz2: " 
-            << m_selected_json_count << std::endl;
+    uint64_t mysql_write_count = 0;
+    if (m_cfg->notify.use_mysql) {
+        mysql_write_count = m_mysql->write_matches(make_view(m_mysql_matches));
+    }
 
     if (m_json_output) {
         m_json_output.close();
@@ -193,6 +209,13 @@ void NotifyProcess::close() {
         std::fclose(m_selected_json_file);
         m_selected_json_file = nullptr;
     }
+
+    std::cout << "Found " << m_match_count << " matches" << std::endl
+        << "  written to matches.json: " << m_json_count << std::endl
+        << "  written to selected_matches.json.bz2: " 
+            << m_selected_json_count << std::endl
+        << "  written to mysql: " << mysql_write_count << "/" 
+            << m_mysql_count << std::endl;
 }
 
 }

@@ -43,6 +43,8 @@ static double eval_infect_rate(
 MatchOutput evaluate_match(const Config& cfg, const MatchInput& input) {
     double compl_score_log = 0.0;
     double min_distance = std::numeric_limits<double>::infinity();
+    int32_t min_time_index = INT32_MAX;
+    int32_t max_time_index = INT32_MIN;
 
     size_t query_i = 0;
     size_t sick_i = 0;
@@ -70,13 +72,19 @@ MatchOutput evaluate_match(const Config& cfg, const MatchInput& input) {
         if (step.infect_rate > 0.0) {
             compl_score_log += std::log1p(
                 -std::min(0.9, double(cfg.period_s)*step.infect_rate));
+
+            min_distance = std::min(min_distance, step.distance_m +
+                0.5*double(query_sample.accuracy_m) + 
+                0.5*double(sick_sample.accuracy_m));
+            min_time_index = std::min(min_time_index, step.time_index);
+            max_time_index = std::max(max_time_index, step.time_index);
         }
-        min_distance = std::min(min_distance, step.distance_m +
-            0.5*double(query_sample.accuracy_m) + 0.5*double(sick_sample.accuracy_m));
     }
 
     output.score = 0.0 - std::expm1(compl_score_log);
     output.min_distance_m = min_distance;
+    output.min_time_index = min_time_index;
+    output.max_time_index = max_time_index;
     return output;
 }
 

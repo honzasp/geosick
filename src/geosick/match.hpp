@@ -25,6 +25,8 @@ struct MatchStep {
 struct MatchOutput {
     double score;
     double min_distance_m;
+    int32_t min_time_index;
+    int32_t max_time_index;
     std::vector<MatchStep> steps;
 };
 

@@ -21,8 +21,8 @@ struct Config {
         bool use_json;
         double json_min_score;
         double json_select;
-        bool use_db;
-        double db_min_score;
+        bool use_mysql;
+        double mysql_min_score;
     } notify;
 
     uint32_t range_days;

@@ -120,7 +120,8 @@ body {
           Vzdálenost: <span id="distance"></span><br>
           <span class="query-color">Uživatel: <span id="query-pos"></span></span><br>
           <span class="sick-color">Nakažený: <span id="sick-pos"></span></span><br>
-          <button id="center-users">Centrovat</button>
+          <button id="center-query">Centrovat uživatele</button><br>
+          <button id="center-sick">Centrovat nakaženého</button><br>
         </div>
       </div>
 
@@ -164,7 +165,8 @@ var inputElems = {
   stepNext: document.getElementById("step-next"),
   seekPrev: document.getElementById("seek-prev"),
   seekNext: document.getElementById("seek-next"),
-  centerUsers: document.getElementById("center-users"),
+  centerQuery: document.getElementById("center-query"),
+  centerSick: document.getElementById("center-sick"),
 };
 var sidebarElems = {
   queryId: document.getElementById("query-id"),
@@ -417,21 +419,23 @@ function seekStep(dir) {
   }
   if (timeIndex !== null) {
     setTimeIndex(selectedMatch, timeIndex);
-    centerToSick();
+    centerTo(sickCircle);
   }
 }
 
 inputElems.seekPrev.addEventListener("click", function() { seekStep(-1); }, false);
 inputElems.seekNext.addEventListener("click", function() { seekStep(+1); }, false);
 
-function centerToSick() {
-  if (sickCircle !== null) {
-    map.setView(sickCircle.getLatLng(), Math.max(map.getZoom(), 16));
+function centerTo(circle) {
+  if (circle !== null) {
+    map.setView(circle.getLatLng(), Math.max(map.getZoom(), 16));
   }
 }
 
-inputElems.centerUsers.addEventListener("click", function() { centerToSick(); }, false);
-
+inputElems.centerQuery.addEventListener("click",
+    function() { centerTo(queryCircle); }, false);
+inputElems.centerSick.addEventListener("click",
+    function() { centerTo(sickCircle); }, false);
 
 /// animating the steps
 

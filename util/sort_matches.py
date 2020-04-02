@@ -4,7 +4,7 @@ import json
 matches = []
 with open("selected_matches.json", "rt") as f_in:
     for line in f_in:
-        m = re.search(r'"score": ([0-9.e+-]+),', line)
+        m = re.search(r'"score":\s*([0-9.e+-]+),', line)
         matches.append((float(m[1]), line))
 
 matches.sort(reverse=True)

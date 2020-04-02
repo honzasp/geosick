@@ -41,8 +41,8 @@ static Config config_from_json(nlohmann::json& doc) {
     cfg.notify.use_json = doc.value<bool>(p("/notify/use_json"), true);
     cfg.notify.json_min_score = doc.value<double>(p("/notify/json_min_score"), 0.001);
     cfg.notify.json_select = doc.value<double>(p("/notify/json_select"), 0.1);
-    cfg.notify.use_db = doc.value<bool>(p("/notify/use_db"), false);
-    cfg.notify.db_min_score = doc.value<double>(p("/notify/db_min_score"), 0.1);
+    cfg.notify.use_mysql = doc.value<bool>(p("/notify/use_mysql"), false);
+    cfg.notify.mysql_min_score = doc.value<double>(p("/notify/mysql_min_score"), 0.05);
 
     cfg.range_days = doc.value<uint32_t>(p("/range_days"), 14);
     cfg.period_s = doc.value<uint32_t>(p("/period_s"), 30);
@@ -125,7 +125,7 @@ static void main(int argc, char** argv) {
 
     std::cout << "Searching for matches..." << std::endl;
     Stopwatch search_sw;
-    NotifyProcess notify_proc(&cfg, &sampler,
+    NotifyProcess notify_proc(&cfg, &sampler, &mysql,
         temp_dir / "matches.json", temp_dir / "selected_matches.json.bz2");
     SearchProcess search_proc(&cfg, &sampler, &search, &sick_map, &notify_proc);
     auto reader = read_proc.read_query_rows();

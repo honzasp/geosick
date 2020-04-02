@@ -116,6 +116,38 @@ int32_t MysqlDb::read_now_timestamp() {
     return timestamp;
 }
 
+uint64_t MysqlDb::write_matches(ArrayView<Match> matches) {
+    mysqlpp::Transaction trans(m_conn, mysqlpp::Transaction::read_committed);
+
+    std::set<std::pair<uint32_t, uint32_t>> found_pairs;
+    mysqlpp::Query select_query = m_conn.query(R"(
+        SELECT client_id, suspicious_id
+        FROM clients_matches
+    )");
+    auto select_res = select_query.use();
+    while (auto row = select_res.fetch_row()) {
+        uint32_t query_id = read_u32(row.at(0));
+        uint32_t sick_id = read_u32(row.at(1));
+        found_pairs.emplace(query_id, sick_id);
+    }
+
+    uint64_t write_count = 0;
+    mysqlpp::Query insert_query = m_conn.query(R"(
+        INSERT INTO clients_matches(client_id, suspicious_id, score)
+        VALUES (%0q, %1q, %2q)
+    )");
+    insert_query.parse();
+    for (const Match& m: matches) {
+        if (found_pairs.count(std::make_pair(m.query_id, m.sick_id)) == 0) {
+            insert_query.execute(m.query_id, m.sick_id, m.score);
+            write_count += 1;
+        }
+    }
+
+    trans.commit();
+    return write_count;
+}
+
 std::optional<GeoRow> MysqlReader::read() {
     auto row = m_result.fetch_row();
     if (!row) { return {}; }

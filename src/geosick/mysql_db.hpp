@@ -3,6 +3,7 @@
 #include <unordered_set>
 #include "geosick/config.hpp"
 #include "geosick/geo_row_reader.hpp"
+#include "geosick/slice.hpp"
 
 namespace geosick {
 
@@ -21,6 +22,13 @@ public:
   UserIds read_user_ids();
 
   int32_t read_now_timestamp();
+
+  struct Match {
+      uint32_t query_id;
+      uint32_t sick_id;
+      double score;
+  };
+  uint64_t write_matches(ArrayView<Match> matches);
 };
 
 class MysqlReader final: public GeoRowReader {

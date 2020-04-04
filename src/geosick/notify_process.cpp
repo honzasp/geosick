@@ -172,8 +172,9 @@ void NotifyProcess::notify_mysql(const MatchInput& mi, const MatchOutput& mo) {
     m.query_id = mi.query_user_id;
     m.sick_id = mi.sick_user_id;
     m.score = mo.score;
-    //m.distance_m = mo.min_distance_m;
-    //m.timestamp = m_sampler->time_index_to_timestamp(mo.max_time_index);
+    m.distance = mo.min_distance_m;
+    m.timestamp = m_sampler->time_index_to_timestamp(mo.max_time_index)
+        / (24*60*60) * (24*60*60);
     m_mysql_matches.push_back(m);
     m_mysql_count += 1;
 }

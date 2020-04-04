@@ -27,6 +27,8 @@ public:
       uint32_t query_id;
       uint32_t sick_id;
       double score;
+      double distance;
+      int32_t timestamp;
   };
   uint64_t write_matches(ArrayView<Match> matches);
 };

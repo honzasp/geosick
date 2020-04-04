@@ -71,6 +71,11 @@ MysqlDb::MysqlDb(const Config& cfg) {
 
     m_conn.connect(cfg.mysql.db.c_str(), cfg.mysql.server.c_str(),
         cfg.mysql.user.c_str(), cfg.mysql.password.c_str());
+
+    mysqlpp::Query tz_query = m_conn.query(R"(
+        SET time_zone = '+00:00'
+    )");
+    tz_query.execute();
 }
 
 std::unique_ptr<MysqlReader> MysqlDb::read_rows() {
@@ -133,13 +138,15 @@ uint64_t MysqlDb::write_matches(ArrayView<Match> matches) {
 
     uint64_t write_count = 0;
     mysqlpp::Query insert_query = m_conn.query(R"(
-        INSERT INTO clients_matches(client_id, suspicious_id, score)
-        VALUES (%0q, %1q, %2q)
+        INSERT INTO clients_matches
+            (client_id, suspicious_id, score, distance, match_date)
+        VALUES (%0q, %1q, %2q, %3q, FROM_UNIXTIME(%4q))
     )");
     insert_query.parse();
     for (const Match& m: matches) {
         if (found_pairs.count(std::make_pair(m.query_id, m.sick_id)) == 0) {
-            insert_query.execute(m.query_id, m.sick_id, m.score);
+            insert_query.execute(m.query_id, m.sick_id, m.score,
+                int32_t(m.distance), m.timestamp);
             write_count += 1;
         }
     }
